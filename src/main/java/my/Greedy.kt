@@ -33,14 +33,13 @@ fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
         fun Project.canTake(): Boolean {
             return this.roleToLevel.all { (role, level) ->
                 val eligibleUsers = skillToUser[role] ?: return false
-                eligibleUsers.any { usersToFreeDay[it]!! >= day && it.skills[role]!! >= level}
+                eligibleUsers.any { usersToFreeDay[it]!! <= day && it.skills[role]!! >= level}
             }
         }
         fun Project.take(): Score.ProjectOut? {
-            projects.remove(this)
             val usersToFreeDayCopy = usersToFreeDay.toMutableMap()
             val users = this.roleToLevel.map { (role, level) ->
-                val user = skillToUser[role]!!.firstOrNull { usersToFreeDayCopy[it]!! < day && it.skills[role]!! >= level }
+                val user = skillToUser[role]!!.firstOrNull { usersToFreeDayCopy[it]!! <= day && it.skills[role]!! >= level }
                 if (user == null){
                     return null
                 }
@@ -49,12 +48,14 @@ fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
             }
             usersToFreeDay.putAll(usersToFreeDayCopy)
             projectToEndDay[this] = day + this.days
+            projects.remove(this)
             return ProjectOut(this, users)
         }
 
-        val best = projects.filter { it.canTake() }.sortedBy {
+        val sorted = projects.filter { it.canTake() }.sortedBy {
             it.realScore() * 1.0 / it.days / it.roleToLevel.size
         }
+        val best = sorted
             .asSequence().map { it.take() }.firstOrNull { it != null }
 
 

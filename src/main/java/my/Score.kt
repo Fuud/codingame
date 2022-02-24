@@ -41,6 +41,8 @@ data class Score(val taskName: String) {
             it.users.forEach { user -> user2day[user] = endDay + 1 }
         }
 
+        println("${taskName}.${score}.txt")
+
         File("${taskName}.${score}.txt").printWriter().use { writer ->
             writer.println(projectOutList.size)
             projectOutList.forEach {
