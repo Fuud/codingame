@@ -46,7 +46,7 @@ fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
                 }else {
                     level
                 }
-                val user = skillToUser[role]!!.sortedBy { it.skills.size }.filter {
+                val user = skillToUser[role]!!.filter {
                    (usersToFreeDayCopy[it] ?: usersToFreeDay[it]!!) <= day && it.skills[role]!! >= requiredLevel
                 }.minBy { it.skills[role]!! }
                 if (user == null){
