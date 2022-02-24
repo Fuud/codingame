@@ -9,7 +9,7 @@ object MyMain {
         process(Task.c_collaboration)
         process(Task.d_dense_schedule)
         process(Task.e_exceptional_skills)
-        process(Task.f_find_great_mentors)
+//        process(Task.f_find_great_mentors)
     }
 }
 
@@ -20,7 +20,7 @@ fun process(task: Task){
     Score(task.name).print(result)
 }
 
-data class User(val name: String, val skills: Map<String, Int>)
+data class User(val name: String, val skills: MutableMap<String, Int>)
 
 data class Project(val name: String, val days: Int, val score: Int, val bestBefore: Int, val roleToLevel: List<Pair<String, Int>>)
 
@@ -51,7 +51,7 @@ fun parse(file: Task): UsersAndProjects{
                 val skillLevel = skillLn.substringAfterLast(" ").toInt()
                 skillName to skillLevel
             }.toMap()
-            User(name, skills)
+            User(name, skills.toMutableMap())
         }
         val projects = (0 until projectsCount).map {_ ->
             val projectLn = it.readLine()

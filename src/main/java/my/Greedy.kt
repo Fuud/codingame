@@ -38,18 +38,25 @@ fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
         }
         fun Project.take(): Score.ProjectOut? {
             val usersToFreeDayCopy = usersToFreeDay.toMutableMap()
-            val users = this.roleToLevel.map { (role, level) ->
+            val userToLevel = this.roleToLevel.map { (role, level) ->
                 val user = skillToUser[role]!!.firstOrNull { usersToFreeDayCopy[it]!! <= day && it.skills[role]!! >= level }
                 if (user == null){
                     return null
                 }
                 usersToFreeDayCopy[user] = day + this.days
-                user
+                val up = user.skills[role]!! <= level
+                user to (up to role)
+            }
+            userToLevel.forEach { (user, pair) ->
+                val (up, role) = pair
+                if (up){
+                    user.skills[role] = user.skills[role]!! + 1
+                }
             }
             usersToFreeDay.putAll(usersToFreeDayCopy)
             projectToEndDay[this] = day + this.days
             projects.remove(this)
-            return ProjectOut(this, users)
+            return ProjectOut(this, userToLevel.map { it.first })
         }
 
         val sorted = projects.filter { it.canTake() }.sortedBy {
