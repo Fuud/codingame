@@ -8,7 +8,6 @@ data class Score(val taskName: String) {
     }
 
     fun print(projectOutList: List<ProjectOut>) {
-        var day = 0L
         var score = 0L
         val user2time = HashMap<User, Long/*available day*/>()
 
