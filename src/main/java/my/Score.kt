@@ -8,9 +8,9 @@ fun main(string: Array<String>) {
     val bob = User("Bob", mutableMapOf("HTML" to 5, "CSS" to 5))
     val maria = User("Maria", mutableMapOf("Python" to 3))
 
-    val logging = Project("Logging", 5, 10, 5, mutableMapOf())
-    val webServer = Project("WebServer", 7, 10, 7, mutableMapOf())
-    val webChat = Project("WebChat", 10, 20, 20, mutableMapOf())
+    val logging = Project("Logging", 5, 10, 5, emptyList())
+    val webServer = Project("WebServer", 7, 10, 7, emptyList())
+    val webChat = Project("WebChat", 10, 20, 20, emptyList())
     score.print(projectOutList = listOf(Score.ProjectOut(webServer, listOf(bob, ann)),
         Score.ProjectOut(logging, listOf(ann)),
         Score.ProjectOut(webChat, listOf(maria, bob))

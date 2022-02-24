@@ -4,13 +4,24 @@ object MyMain {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        println(parse(Task.a_an_example))
+        process(Task.a_an_example)
+        process(Task.b_better_start_small)
+        process(Task.c_collaboration)
+        process(Task.d_dense_schedule)
+        process(Task.e_exceptional_skills)
     }
+}
+
+fun process(task: Task){
+    println(task)
+    val (users, projects) = parse(task)
+    val result = greedy(users, projects)
+    Score(task.name).print(result)
 }
 
 data class User(val name: String, val skills: Map<String, Int>)
 
-data class Project(val name: String, val days: Int, val score: Int, val bestBefore: Int, val roleToLevel: Map<String, Int>)
+data class Project(val name: String, val days: Int, val score: Int, val bestBefore: Int, val roleToLevel: List<Pair<String, Int>>)
 
 data class UsersAndProjects(val users: List<User>, val projects: List<Project>)
 
@@ -51,7 +62,7 @@ fun parse(file: Task): UsersAndProjects{
                 val skillName = skillLn.substringBeforeLast(" ")
                 val skillLevel = skillLn.substringAfterLast(" ").toInt()
                 skillName to skillLevel
-            }.toMap()
+            }
             Project(name, days, score, bestBefore, roleToLevel)
         }
         return UsersAndProjects(users, projects)
