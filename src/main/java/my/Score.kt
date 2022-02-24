@@ -3,36 +3,37 @@ package my
 import java.io.File
 
 data class Score(val taskName: String) {
-    var score = 0L
-    var day = 0
-    private val projectOuts = mutableListOf<ProjectOut>()
 
     data class ProjectOut(val project: Project, val users: List<User>) {
     }
 
-    fun addProject(project: Project, users: List<User>) {
-        val projectEnd = day + project.days
-        if (projectEnd <= project.bestBefore) {
-            score += score + project.score
-        } else {
-            val scoreAdd = project.score - (projectEnd - project.bestBefore)
-            if (scoreAdd > 0) {
-                score += scoreAdd
-            }
-        }
-        projectOuts.add(ProjectOut(project, users))
-        day += project.days
-    }
+    fun print(projectOutList: List<ProjectOut>) {
+        var day = 0L
+        var score = 0L
+        val user2time = HashMap<User, Long/*available day*/>()
 
-    fun print() {
+        projectOutList.forEach { it ->
+            // find day to start project
+            val day2start = it.users.map { u -> user2time[u] ?: 0 }.max() ?: 0
+            val endDay = day2start + it.project.bestBefore
+            if (endDay < it.project.bestBefore) {
+                score += it.project.score
+            } else {
+                val scoreAdd = it.project.bestBefore - (endDay + 1 - it.project.bestBefore)
+                if (scoreAdd > 0) {
+                    score += scoreAdd
+                }
+            }
+            it.users.forEach { user -> user2time[user] = endDay }
+        }
+
         File("${taskName}.${score}.${System.currentTimeMillis()}.txt").printWriter().use { writer ->
-            writer.println(projectOuts.size)
-            projectOuts.forEach {
+            writer.println(projectOutList.size)
+            projectOutList.forEach {
                 writer.println(it.project.name)
                 val userString = it.users.joinToString(separator = " ") { u -> u.name }
                 writer.print(userString)
             }
-
         }
     }
 }
