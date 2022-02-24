@@ -4,11 +4,11 @@ object MyMain {
 
     @JvmStatic
     fun main(args: Array<String>) {
-//        process(Task.a_an_example)
-//        process(Task.b_better_start_small)
-//        process(Task.c_collaboration)
-//        process(Task.d_dense_schedule)
-//        process(Task.e_exceptional_skills)
+        process(Task.a_an_example)
+        process(Task.b_better_start_small)
+        process(Task.c_collaboration)
+        process(Task.d_dense_schedule)
+        process(Task.e_exceptional_skills)
         process(Task.f_find_great_mentors)
     }
 }
