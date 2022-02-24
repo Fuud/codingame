@@ -10,20 +10,18 @@ data class Score(val taskName: String) {
     data class ProjectOut(val project: Project, val users: List<User>) {
     }
 
-    fun addProject(project: Project, users: List<User>): Boolean {
+    fun addProject(project: Project, users: List<User>) {
         val projectEnd = day + project.days
         if (projectEnd <= project.bestBefore) {
             score += score + project.score
         } else {
             val scoreAdd = project.score - (projectEnd - project.bestBefore)
-            if (scoreAdd < 0) {
-                return false
+            if (scoreAdd > 0) {
+                score += scoreAdd
             }
-            score += scoreAdd
         }
         projectOuts.add(ProjectOut(project, users))
         day += project.days
-        return true
     }
 
     fun print() {
