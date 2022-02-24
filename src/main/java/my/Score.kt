@@ -22,6 +22,7 @@ data class Score(val taskName: String) {
             score += scoreAdd
         }
         projectOuts.add(ProjectOut(project, users))
+        day += project.days
         return true
     }
 
