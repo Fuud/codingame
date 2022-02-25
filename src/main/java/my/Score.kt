@@ -3,7 +3,7 @@ package my
 import java.io.File
 
 fun main(string: Array<String>) {
-    val score = Score("A")
+    val score = Score(Task.a)
     val ann = User("Anna", mutableMapOf("C++" to 2))
     val bob = User("Bob", mutableMapOf("HTML" to 5, "CSS" to 5))
     val maria = User("Maria", mutableMapOf("Python" to 3))
@@ -17,14 +17,13 @@ fun main(string: Array<String>) {
     ))
 }
 
-data class Score(val taskName: String) {
+data class Score(val task: Task) {
 
-    data class ProjectOut(val project: Project, val users: List<User>) {
-    }
+    data class ProjectOut(val project: Project, val users: List<User>)
 
-    fun print(projectOutList: List<ProjectOut>) {
-        var score = 0L
-        val user2day = mutableMapOf<User, Long/*available day*/>()
+    fun print(projectOutList: List<ProjectOut>): Int {
+        var score = 0
+        val user2day = mutableMapOf<User, Int/*available day*/>()
 
         projectOutList.forEach { it ->
             // find day to start project
@@ -40,18 +39,31 @@ data class Score(val taskName: String) {
             }
             it.users.forEach { user -> user2day[user] = endDay + 1 }
         }
-
-        println("${taskName}.${score}.txt")
-
-        File("${taskName}.${score}.txt").printWriter().use { writer ->
-            writer.println(projectOutList.size)
-            projectOutList.forEach {
-                writer.println(it.project.name)
-                val userString = it.users.joinToString(separator = " ") { u -> u.name }
-                writer.print(userString)
-                writer.println()
+        if (scores.getOrDefault(task, 0) < score) {
+            scores[task] = score
+            println("${task.name}.${score}.txt")
+            File("${task.name}.${score}.txt").printWriter().use { writer ->
+                writer.println(projectOutList.size)
+                projectOutList.forEach {
+                    writer.println(it.project.name)
+                    val userString = it.users.joinToString(separator = " ") { u -> u.name }
+                    writer.print(userString)
+                    writer.println()
+                }
             }
         }
+        return score
+    }
+
+    companion object {
+        val scores = mutableMapOf(
+            Task.a to 33,
+            Task.b to 743841,
+            Task.c to 42848,
+            Task.d to 133020,
+            Task.e to 1599694,
+            Task.f to 337955,
+        )
     }
 
 }

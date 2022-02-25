@@ -4,44 +4,46 @@ object MyMain {
 
     @JvmStatic
     fun main(args: Array<String>) {
+        val tasks = listOf(
+            Task.b,
+            Task.c,
+            Task.d,
+            Task.e,
+            Task.f,
+        )
+        val task2description = tasks.associateWith(::parse)
         while (true) {
-//        process(Task.a_an_example)
-//            process(Task.b_better_start_small)
-//            process(Task.c_collaboration)
-//            process(Task.d_dense_schedule)
-//            process(Task.e_exceptional_skills)
-        process(Task.f_find_great_mentors)
+            task2description.forEach { (task, description) ->
+                val result = greedy(description)
+                println(task.toString()+  "" + Score(task).print(result))
+            }
         }
     }
 }
 
-fun process(task: Task) {
-    println(task)
-    val (users, projects) = parse(task)
-    val result = greedy(users, projects)
-    Score(task.name).print(result)
+data class User(val name: String, val skills: Map<String, Int>) {
+    fun mutate() = MutableUser(name, skills.toMutableMap())
 }
 
-data class User(val name: String, val skills: MutableMap<String, Int>)
+class MutableUser(val name: String, val skills: MutableMap<String, Int>)
 
 data class Project(val name: String, val days: Int, val score: Int, val bestBefore: Int, val roleToLevel: List<Pair<String, Int>>)
 
 data class UsersAndProjects(val users: List<User>, val projects: List<Project>)
 
-enum class Task {
-    a_an_example,
-    b_better_start_small,
-    c_collaboration,
-    d_dense_schedule,
-    e_exceptional_skills,
-    f_find_great_mentors,
+enum class Task(val description: String) {
+    a("an_example"),
+    b("better_start_small"),
+    c("collaboration"),
+    d("dense_schedule"),
+    e("exceptional_skills"),
+    f("find_great_mentors"),
 }
 
-fun parse(file: Task): UsersAndProjects {
+fun parse(task: Task): UsersAndProjects {
     mutableListOf<User>()
-    val projects = mutableListOf<Project>()
 
-    MyMain::class.java.classLoader.getResourceAsStream("${file}.in.txt").bufferedReader().use {
+    MyMain::class.java.classLoader.getResourceAsStream("${task}_${task.description}.in.txt").bufferedReader().use {
         val (contributorsCount, projectsCount) = it.readLine().split(" ").map { it.toInt() }
         val users = (0 until contributorsCount).map { _ ->
             val contrLn = it.readLine()

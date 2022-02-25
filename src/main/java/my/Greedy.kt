@@ -4,14 +4,14 @@ import my.Score.ProjectOut
 import java.lang.Integer.max
 import java.util.Random
 
-fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
-
-    val projects = projects.toMutableList()
+fun greedy(usersAndProjects: UsersAndProjects): List<ProjectOut> {
+    val users = usersAndProjects.users.map(User::mutate)
+    val projects = usersAndProjects.projects.toMutableList()
     val projectToEndDay = mutableMapOf<Project, Int>()
 
     val result = mutableListOf<ProjectOut>()
 
-    val skillToUser: Map<String, List<User>> =
+    val skillToUser: Map<String, List<MutableUser>> =
         users.flatMap { user -> user.skills.keys.map { it to user } }.groupBy { it.first }
             .mapValues { it.value.map { it.second } }
 
@@ -22,11 +22,13 @@ fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
 
     val random = Random()
     while (true) {
-        fun Project.realScore() = (if (bestBefore > days + day) {
+        fun Project.realScore() = if (bestBefore > days + day) {
             score
         } else {
             max(0, score - (day + days + 1 - bestBefore))
-        }) * (0.8 + random.nextDouble() * 0.2)
+        }
+
+        fun Project.randScore() = realScore() * (0.8 + random.nextDouble() * 0.2)
 
         fun Project.canTake(): Boolean {
             return this.roleToLevel.all { (role, level) ->
@@ -36,8 +38,9 @@ fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
         }
 
         fun Project.take(): ProjectOut? {
-            val usersToFreeDayCopy = mutableMapOf<User, Int>()
+            val usersToFreeDayCopy = mutableMapOf<MutableUser, Int>()
             val mentors = mutableMapOf<String, Int>()
+            var anyUps = false
             val userToLevel = this.roleToLevel.map { (role, level) ->
                 val hasMentor = (mentors[role] ?: -1) >= level
                 val requiredLevel = if (hasMentor) {
@@ -55,7 +58,11 @@ fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
                 }
                 usersToFreeDayCopy[user] = day + this.days
                 val up = user.skills[role]!! <= level
+                anyUps = anyUps || up
                 user to (up to role)
+            }
+            if (!anyUps && realScore() == 0) {
+                return null
             }
             userToLevel.forEach { (user, pair) ->
                 val (up, role) = pair
@@ -66,12 +73,14 @@ fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
             usersToFreeDay.putAll(usersToFreeDayCopy)
             projectToEndDay[this] = day + this.days
             projects.remove(this)
-            return ProjectOut(this, userToLevel.map { it.first })
+            return ProjectOut(this, userToLevel.map { User(it.first.name, it.first.skills) })
         }
 
-        val sorted = projects.filter { it.canTake() }.map { it to it.realScore() }.sortedBy { (pr, score) ->
-            score * 1.0 / pr.days / pr.roleToLevel.size
-        }
+        val sorted = projects.filter { it.canTake() }
+            .map { it to it.randScore() }
+            .sortedBy { (pr, score) ->
+                score * 1.0 / pr.days / pr.roleToLevel.size
+            }
         val best = sorted
             .asSequence().map { it.first.take() }.firstOrNull { it != null }
 
