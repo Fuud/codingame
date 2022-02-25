@@ -4,16 +4,18 @@ object MyMain {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        process(Task.a_an_example)
-        process(Task.b_better_start_small)
-        process(Task.c_collaboration)
-        process(Task.d_dense_schedule)
-        process(Task.e_exceptional_skills)
+        while (true) {
+//        process(Task.a_an_example)
+//            process(Task.b_better_start_small)
+//            process(Task.c_collaboration)
+//            process(Task.d_dense_schedule)
+//            process(Task.e_exceptional_skills)
         process(Task.f_find_great_mentors)
+        }
     }
 }
 
-fun process(task: Task){
+fun process(task: Task) {
     println(task)
     val (users, projects) = parse(task)
     val result = greedy(users, projects)
@@ -26,7 +28,7 @@ data class Project(val name: String, val days: Int, val score: Int, val bestBefo
 
 data class UsersAndProjects(val users: List<User>, val projects: List<Project>)
 
-enum class Task{
+enum class Task {
     a_an_example,
     b_better_start_small,
     c_collaboration,
@@ -35,17 +37,17 @@ enum class Task{
     f_find_great_mentors,
 }
 
-fun parse(file: Task): UsersAndProjects{
-     mutableListOf<User>()
+fun parse(file: Task): UsersAndProjects {
+    mutableListOf<User>()
     val projects = mutableListOf<Project>()
 
     MyMain::class.java.classLoader.getResourceAsStream("${file}.in.txt").bufferedReader().use {
         val (contributorsCount, projectsCount) = it.readLine().split(" ").map { it.toInt() }
-        val users = (0 until contributorsCount).map{_ ->
+        val users = (0 until contributorsCount).map { _ ->
             val contrLn = it.readLine()
             val name = contrLn.substringBeforeLast(" ")
             val skillCount = contrLn.substringAfterLast(" ").toInt()
-            val skills = (0 until skillCount).map{_ ->
+            val skills = (0 until skillCount).map { _ ->
                 val skillLn = it.readLine()
                 val skillName = skillLn.substringBeforeLast(" ")
                 val skillLevel = skillLn.substringAfterLast(" ").toInt()
@@ -53,7 +55,7 @@ fun parse(file: Task): UsersAndProjects{
             }.toMap()
             User(name, skills.toMutableMap())
         }
-        val projects = (0 until projectsCount).map {_ ->
+        val projects = (0 until projectsCount).map { _ ->
             val projectLn = it.readLine()
             val projectParts = projectLn.split(" ")
             val name = projectParts.dropLast(4).joinToString(separator = " ")

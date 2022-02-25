@@ -2,8 +2,7 @@ package my
 
 import my.Score.ProjectOut
 import java.lang.Integer.max
-
-data class Schedule(val day: Int, val users: List<User>, val projects: List<Project>)
+import java.util.Random
 
 fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
 
@@ -21,39 +20,36 @@ fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
 
     val usersToFreeDay = users.associateWith { 0 }.toMutableMap()
 
+    val random = Random()
     while (true) {
-
-
-        fun Project.realScore() = if (bestBefore > days + day) {
+        fun Project.realScore() = (if (bestBefore > days + day) {
             score
         } else {
             max(0, score - (day + days + 1 - bestBefore))
-        }
+        }) * (0.8 + random.nextDouble() * 0.2)
 
         fun Project.canTake(): Boolean {
             return this.roleToLevel.all { (role, level) ->
                 val eligibleUsers = skillToUser[role] ?: return false
-                eligibleUsers.any { usersToFreeDay[it]!! <= day && it.skills[role]!! >= level}
+                eligibleUsers.any { usersToFreeDay[it]!! <= day && it.skills[role]!! >= level }
             }
         }
-        fun Project.take(): Score.ProjectOut? {
+
+        fun Project.take(): ProjectOut? {
             val usersToFreeDayCopy = mutableMapOf<User, Int>()
             val mentors = mutableMapOf<String, Int>()
             val userToLevel = this.roleToLevel.map { (role, level) ->
                 val hasMentor = (mentors[role] ?: -1) >= level
-                val requiredLevel = if (hasMentor){
+                val requiredLevel = if (hasMentor) {
                     level - 1
-                }else {
+                } else {
                     level
                 }
                 val user = skillToUser[role]!!.filter {
-                   (usersToFreeDayCopy[it] ?: usersToFreeDay[it]!!) <= day && it.skills[role]!! >= requiredLevel
-                }.minBy { it.skills[role]!! }
-                if (user == null){
-                    return null
-                }
-                user.skills.forEach { role, level ->
-                    if ((mentors[role] ?: -1) < level){
+                    (usersToFreeDayCopy[it] ?: usersToFreeDay[it]!!) <= day && it.skills[role]!! >= requiredLevel
+                }.minBy { it.skills[role]!! } ?: return null
+                user.skills.forEach { (role, level) ->
+                    if ((mentors[role] ?: -1) < level) {
                         mentors[role] = level
                     }
                 }
@@ -63,7 +59,7 @@ fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
             }
             userToLevel.forEach { (user, pair) ->
                 val (up, role) = pair
-                if (up){
+                if (up) {
                     user.skills[role] = user.skills[role]!! + 1
                 }
             }
@@ -73,21 +69,16 @@ fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
             return ProjectOut(this, userToLevel.map { it.first })
         }
 
-        val sorted = projects.filter { it.canTake() }.sortedBy {
-            it.realScore() * 1.0 / it.days / it.roleToLevel.size
+        val sorted = projects.filter { it.canTake() }.map { it to it.realScore() }.sortedBy { (pr, score) ->
+            score * 1.0 / pr.days / pr.roleToLevel.size
         }
         val best = sorted
-            .asSequence().map { it.take() }.firstOrNull { it != null }
+            .asSequence().map { it.first.take() }.firstOrNull { it != null }
 
-
-
-        if (best == null){
-            val nextFinish = projectToEndDay.filter { it.value > day }.values.min()
-            if (nextFinish == null){
-                break
-            }
+        if (best == null) {
+            val nextFinish = projectToEndDay.filter { it.value > day }.values.min() ?: break
             day = nextFinish + 1
-        }else {
+        } else {
             result.add(best)
         }
     }
