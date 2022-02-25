@@ -47,7 +47,7 @@ fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
                 }
                 val user = skillToUser[role]!!.filter {
                     (usersToFreeDayCopy[it] ?: usersToFreeDay[it]!!) <= day && it.skills[role]!! >= requiredLevel
-                }.minBy { it.skills[role]!! } ?: return null
+                }.minByOrNull { it.skills[role]!! } ?: return null
                 user.skills.forEach { (role, level) ->
                     if ((mentors[role] ?: -1) < level) {
                         mentors[role] = level
@@ -76,7 +76,7 @@ fun greedy(users: List<User>, projects: List<Project>): List<ProjectOut> {
             .asSequence().map { it.first.take() }.firstOrNull { it != null }
 
         if (best == null) {
-            val nextFinish = projectToEndDay.filter { it.value > day }.values.min() ?: break
+            val nextFinish = projectToEndDay.filter { it.value > day }.values.minOrNull() ?: break
             day = nextFinish + 1
         } else {
             result.add(best)

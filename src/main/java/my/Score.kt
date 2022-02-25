@@ -28,7 +28,7 @@ data class Score(val taskName: String) {
 
         projectOutList.forEach { it ->
             // find day to start project
-            val day2start = it.users.map { u -> user2day[u] ?: 0 }.max() ?: 0
+            val day2start = it.users.map { u -> user2day[u] ?: 0 }.maxOrNull() ?: 0
             val endDay = day2start + it.project.days - 1
             if (endDay < it.project.bestBefore) {
                 score += it.project.score
