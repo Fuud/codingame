@@ -3,20 +3,20 @@ package my.reply
 import java.util.*
 
 fun main() {
-    listOf(
-    "00-example.txt",
-    "01-the-cloud-abyss.txt",
-    "02-iot-island-of-terror.txt",
-    "03-etheryum.txt",
-    "04-the-desert-of-autonomous-machines.txt",
-    "05-androids-armageddon.txt",
-    ).forEach { file ->
-        println(file)
-        val game = parse(file)
-//        stat(game)
-        // println(game)
-        game.solve()
-        output(game, file)
+    while(true) {
+        listOf(
+            "00-example.txt",
+            "01-the-cloud-abyss.txt",
+            "02-iot-island-of-terror.txt",
+            "03-etheryum.txt",
+            "04-the-desert-of-autonomous-machines.txt",
+            "05-androids-armageddon.txt",
+        ).forEach { file ->
+            // println(file)
+            val game = parse(file)
+            game.solve()
+            output(game, file)
+        }
     }
 }
 

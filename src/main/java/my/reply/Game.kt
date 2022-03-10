@@ -16,10 +16,19 @@ data class Game(
     val remindingDays: Int
         get() = maxTurns - currentDay - 1
 
-    val staminaPrice = daemons.map { (it.accumulatedPrices.lastOrNull() ?: 0) / it.stamina }.let { it.sum() *1.0 / it.size }
+    var staminaPrice: Double = 0.0
+
+    fun updateStaminaPrice() {
+        staminaPrice = daemons.map { (it.accumulatedPrices.lastOrNull() ?: 0) / it.stamina }.let { it.sum() * 1.0 / it.size }
+    }
+
+    init {
+        updateStaminaPrice()
+    }
 }
 
 fun Game.fight(daemon: Daemon) {
+
     if (staminaIncrease[currentDay] != null) {
         hero.stamina = min(hero.maxStamina, hero.stamina + staminaIncrease[currentDay]!!)
         staminaIncrease.remove(currentDay)
@@ -43,6 +52,7 @@ fun Game.fight(daemon: Daemon) {
         currentScore += addScore
         daemons.remove(daemon)
         defeatedDaemons.add(daemon.id)
+        updateStaminaPrice()
         currentDay++
     }
 }

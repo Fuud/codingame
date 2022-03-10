@@ -1,9 +1,13 @@
 package my.reply
 
+import java.util.*
+
+
 fun Game.chooseBestDaemon(): Daemon? {
     return daemons.maxByOrNull { this.rate(it) }
 }
 
+val random = Random()
 
 fun Game.rate(daemon: Daemon): Double {
     val days = this.getDaysToFight(daemon) ?: return 0.0
@@ -11,8 +15,9 @@ fun Game.rate(daemon: Daemon): Double {
     val reminding = this.remindingDays - days
     val stamina = daemon.calcFinalStamina(reminding)
     val score = daemon.calcFinalScore(reminding) / (days + 1)
-    val staminaScore = (stamina - daemon.stamina)*this.staminaPrice / (days + daemon.turnToRecover + 1)
-    return score.toDouble() + staminaScore
+    val staminaScore = (stamina - daemon.stamina) * this.staminaPrice / (days + daemon.turnToRecover + 1)
+    val scoreR = score.toDouble() + staminaScore
+    return scoreR * 0.8 + random.nextDouble() * 0.2
 }
 //fun Game.rate(daemon: Daemon): Double {
 //    val days = this.getDaysToFight(daemon) ?: return 0.0
