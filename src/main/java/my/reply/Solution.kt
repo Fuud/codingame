@@ -3,11 +3,9 @@ package my.reply
 import java.io.File
 
 fun solve(game: Game) {
-    listOf(1,3,2,4,0).map {idx -> game.daemons.single { it.id ==idx } }.forEach {
-        game.fight(it)
+    while (game.currentDay < game.maxTurns && game.daemons.isNotEmpty()){
+        game.fight(game.daemons.first())
     }
-    println(game.currentScore)
-    println(game)
 }
 
 fun output(game: Game, file: String){
