@@ -17,7 +17,7 @@ fun Game.rate(daemon: Daemon): Double {
     val score = daemon.calcFinalScore(reminding) / (days + 1)
     val staminaScore = (stamina - daemon.stamina) * this.staminaPrice / (days + daemon.turnToRecover + 1)
     val scoreR = score.toDouble() + staminaScore
-    return scoreR * 0.8 + random.nextDouble() * 0.2
+    return scoreR * 0.8 + random.nextDouble() * 0.5
 }
 //fun Game.rate(daemon: Daemon): Double {
 //    val days = this.getDaysToFight(daemon) ?: return 0.0
