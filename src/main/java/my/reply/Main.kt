@@ -39,7 +39,7 @@ fun parse(file: String): Game{
             )
         }
 
-        Game(maxTurns, hero, daemons)
+        Game(maxTurns, hero, daemons.toMutableList())
     }
 }
 
