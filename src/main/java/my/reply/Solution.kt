@@ -9,9 +9,13 @@ fun Game.solve() {
     }
 }
 
-fun output(game: Game, file: String) {
-    File("out").mkdirs()
-    File("out/$file.${game.currentScore}.txt").writer().use { writer ->
+fun output(game: Game, problemName: String) {
+    val outputDirectory = "out"
+    File(outputDirectory).mkdirs()
+    val problemIndex = problemName.substring(0, 2)
+    val currentScore = game.currentScore
+    println("$problemIndex $currentScore")
+    File("$outputDirectory/$problemIndex-$currentScore.txt").writer().use { writer ->
         game.defeatedDaemons.forEach {
             writer.appendLine("$it")
         }
@@ -19,4 +23,5 @@ fun output(game: Game, file: String) {
             writer.appendLine("${it.id}")
         }
     }
+    println()
 }
