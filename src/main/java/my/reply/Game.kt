@@ -15,6 +15,8 @@ data class Game(
 
     val remindingDays: Int
         get() = maxTurns - currentDay - 1
+
+    val staminaPrice = daemons.map { (it.accumulatedPrices.lastOrNull() ?: 0) / it.stamina }.let { it.sum() *1.0 / it.size }
 }
 
 fun Game.fight(daemon: Daemon) {

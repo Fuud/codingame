@@ -10,9 +10,18 @@ fun Game.rate(daemon: Daemon): Double {
     if (this.remindingDays < days) return 0.0
     val reminding = this.remindingDays - days
     val stamina = daemon.calcFinalStamina(reminding)
-    val score = daemon.calcFinalScore(reminding)
-    return score.toDouble()
+    val score = daemon.calcFinalScore(reminding) / (days + 1)
+    val staminaScore = (stamina - daemon.stamina)*this.staminaPrice / (days + daemon.turnToRecover + 1)
+    return score.toDouble() + staminaScore
 }
+//fun Game.rate(daemon: Daemon): Double {
+//    val days = this.getDaysToFight(daemon) ?: return 0.0
+//    if (this.remindingDays < days) return 0.0
+//    val reminding = this.remindingDays - days
+//    val stamina = daemon.calcFinalStamina(reminding)
+//    val score = daemon.calcFinalScore(reminding)
+//    return score.toDouble()
+//}
 
 fun Game.getDaysToFight(d: Daemon): Int? {
     if (this.hero.stamina >= d.stamina) return 0
