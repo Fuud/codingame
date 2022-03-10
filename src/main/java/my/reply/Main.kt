@@ -15,6 +15,7 @@ fun main() {
         val game = parse(file)
         println(game)
         solve(game)
+        output(game, file)
     }
 }
 
