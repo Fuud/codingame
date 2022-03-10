@@ -2,14 +2,16 @@ package my.reply
 
 import java.io.File
 
-fun solve(game: Game) {
-    while (game.currentDay < game.maxTurns && game.daemons.isNotEmpty()){
-        game.fight(game.daemons.first())
+fun Game.solve() {
+    while (currentDay < maxTurns && daemons.isNotEmpty()) {
+        val daemon = chooseBestDaemon() ?: return
+        fight(daemon)
     }
 }
 
-fun output(game: Game, file: String){
-    File("$file.${game.currentScore}.txt").writer().use { writer ->
+fun output(game: Game, file: String) {
+    File("out").mkdirs()
+    File("out/$file.${game.currentScore}.txt").writer().use { writer ->
         game.defeatedDaemons.forEach {
             writer.appendLine("$it")
         }

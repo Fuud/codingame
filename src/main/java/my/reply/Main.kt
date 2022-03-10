@@ -13,8 +13,8 @@ fun main() {
     ).forEach { file ->
         println(file)
         val game = parse(file)
-        println(game)
-        solve(game)
+        // println(game)
+        game.solve()
         output(game, file)
     }
 }

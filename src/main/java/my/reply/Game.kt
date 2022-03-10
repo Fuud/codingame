@@ -1,7 +1,7 @@
 package my.reply
 
 import java.lang.Integer.min
-import java.util.TreeMap
+import java.util.*
 
 data class Game(
     val maxTurns: Int,
@@ -11,7 +11,11 @@ data class Game(
     var currentDay: Int = 0,
     var currentScore: Int = 0,
     val staminaIncrease: TreeMap<Int, Int> = TreeMap()
-)
+) {
+
+    val remindingDays: Int
+        get() = maxTurns - currentDay - 1
+}
 
 fun Game.fight(daemon: Daemon) {
     if (staminaIncrease[currentDay] != null) {
