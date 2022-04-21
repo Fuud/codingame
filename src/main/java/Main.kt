@@ -9,8 +9,14 @@ data class Point(val x: Int, val y: Int)
 data class Hero(val point: Point, val id: Int, val health: Int)
 data class Base(val point: Point)
 data class Spider(val point: Point, val health: Int, val vx: Int, val vy: Int, val nearBase: Int, val threatFor: Int) {
+    fun distance(hero: Hero): Int {
+        return hero.point.distance(this.point)
+    }
+
     var movesToBase: Int = Int.MAX_VALUE
 }
+
+var mana: Int = 0
 
 class Game {
 
@@ -22,6 +28,7 @@ fun main(args: Array<String>) {
     val baseY = input.nextInt()
     val base = Point(baseX, baseY)
     var myBaseHealth = 0;
+    var enemyMana = 0;
 
     var enemyHealth = 0;
     val heroesPerPlayer = input.nextInt() // Always 3
@@ -32,10 +39,11 @@ fun main(args: Array<String>) {
     while (true) {
         for (i in 0 until 2) {
             val health = input.nextInt() // Your base health
-            val mana = input.nextInt() // Ignore in the first league; Spend ten mana to cast a spell
             if (i == 0) {
+                mana = input.nextInt()
                 myBaseHealth = health;
             } else {
+                enemyMana = input.nextInt()
                 enemyHealth = health
             }
         }
@@ -63,7 +71,7 @@ fun main(args: Array<String>) {
                 log("hero $id shift: x=${x - (heroX[id] ?: 0)} y=${y - (heroY[id] ?: 0)}")
                 heroX[id] = x
                 heroY[id] = y
-                heroes.add(Hero(Point(x, y), id, health))
+                heroes.add(Hero(Point(x, y), heroes.size, health))
             } else if (type == 0) {
                 spiders.add(Spider(Point(x, y), health, vx, vy, nearBase, threatFor))
             }
@@ -94,30 +102,49 @@ fun main(args: Array<String>) {
             heroSpider[hero] = spider;
         }
 
-        for (i in 0 until heroesPerPlayer) {
-            val minSpider = heroSpider[heroes[i]]
+        val sortedHeros = heroes.sortedBy { it.point.distance(base) }
+        val heroActions = mutableMapOf<Hero, String>()
+
+        sortedHeros.forEach { hero ->
+            val minSpider = heroSpider[hero]
             // In the first league: MOVE <x> <y> | WAIT; In later leagues: | SPELL <spellParams>;
             if (minSpider != null) {
-                println("MOVE ${minSpider.point.x} ${minSpider.point.y}")
+                val distance = minSpider.distance(hero)
+                if (distance < 1280 * 1280 && mana >= 10) {
+                    mana -= 10
+                    heroActions[hero] =
+                        ("SPELL WIND ${(minSpider.point.x - baseX) * 100} ${(minSpider.point.y - baseY) * 100}")
+                } else {
+                    if (minSpider.point.distance(base) < 10_000 * 10_000) {
+                        heroActions[hero] =
+                            ("MOVE ${minSpider.point.x + minSpider.vx} ${minSpider.point.y + minSpider.vy}")
+                    } else {
+                        heroActions[hero] = ("MOVE ${baseX} ${baseY}")
+                    }
+                }
                 minSpiders.remove(minSpider)
             } else {
-                if (baseX < 3000) {
-                    when (i) {
-                        0 -> println("MOVE 4900 1000")
-                        1 -> println("MOVE 3600 3600")
-                        else -> println("MOVE 1000 4900")
+                heroActions[hero] = if (baseX < 3000) {
+                    when (hero.id) {
+                        0 -> ("MOVE 5900 2000")
+                        1 -> ("MOVE 4600 4600")
+                        else -> ("MOVE 2000 5900")
                     }
                 } else {
-                    when (i) {
-                        0 -> println("MOVE ${baseX - 4900} ${baseY - 1000}")
-                        1 -> println("MOVE ${baseX - 3600} ${baseX - 3600}")
-                        else -> println("MOVE ${baseX - 1000} ${baseX - 4900}")
+                    when (hero.id) {
+                        0 -> ("MOVE ${baseX - 5900} ${baseY - 2000}")
+                        1 -> ("MOVE ${baseX - 4600} ${baseX - 4600}")
+                        else -> "MOVE ${baseX - 2000} ${baseX - 5900}"
                     }
                 }
 
             }
-
         }
+
+        heroes.forEach { hero ->
+            println(heroActions[hero])
+        }
+
     }
 }
 
