@@ -13,6 +13,10 @@ data class Spider(val point: Point, val health: Int, val vx: Int, val vy: Int, v
         return hero.point.distance(this.point)
     }
 
+    fun distance(point: Point): Int {
+        return point.distance(this.point)
+    }
+
     var movesToBase: Int = Int.MAX_VALUE
 }
 
@@ -110,7 +114,10 @@ fun main(args: Array<String>) {
             // In the first league: MOVE <x> <y> | WAIT; In later leagues: | SPELL <spellParams>;
             if (minSpider != null) {
                 val distance = minSpider.distance(hero)
-                if (distance < 1280 * 1280 && mana >= 10) {
+                val toBaseDistance = minSpider.distance(base)
+                val near = distance < 1280 * 1280 && mana >= 10
+                val wind = toBaseDistance < 5000*5000 || mana >= 60
+                if (near && wind) {
                     mana -= 10
                     heroActions[hero] =
                         ("SPELL WIND ${(minSpider.point.x - baseX) * 100} ${(minSpider.point.y - baseY) * 100}")
