@@ -6,9 +6,15 @@ import java.util.*
  **/
 
 data class Point(val x: Int, val y: Int)
-data class Hero(val point: Point, val id: Int, val health: Int)
+data class Hero(val entityId: Int, val point: Point, val idx: Int, val health: Int, val shieldLife: Int, val isControlled: Int) {
+    fun distance(hero: Hero): Int {
+        return point.distance(hero.point)
+    }
+}
+
 data class Base(val point: Point)
 data class Spider(
+    val entityId: Int,
     val point: Point,
     val health: Int,
     val vx: Int,
@@ -78,6 +84,7 @@ fun main(args: Array<String>) {
 
         val spiders = mutableListOf<Spider>()
         val heroes = mutableListOf<Hero>()
+        val enemies = mutableListOf<Hero>()
 
         for (i in 0 until entityCount) {
             val id = input.nextInt() // Unique identifier
@@ -95,12 +102,11 @@ fun main(args: Array<String>) {
                 input.nextInt() // Given this monster's trajectory, is it a threat to 1=your base, 2=your opponent's base, 0=neither
 
             if (type == 1) {
-                log("hero $id shift: x=${x - (heroX[id] ?: 0)} y=${y - (heroY[id] ?: 0)}")
-                heroX[id] = x
-                heroY[id] = y
-                heroes.add(Hero(Point(x, y), heroes.size, health))
+                heroes.add(Hero(id, Point(x, y), heroes.size, health, shieldLife, isControlled))
+            } else if (type == 2) {
+                enemies.add(Hero(id, Point(x, y), enemies.size, health, shieldLife, isControlled))
             } else if (type == 0) {
-                spiders.add(Spider(Point(x, y), health, vx, vy, nearBase, threatFor, shieldLife, isControlled))
+                spiders.add(Spider(id, Point(x, y), health, vx, vy, nearBase, threatFor, shieldLife, isControlled))
             }
         }
 
@@ -133,6 +139,12 @@ fun main(args: Array<String>) {
         val heroActions = mutableMapOf<Hero, String>()
 
         sortedHeros.forEach { hero ->
+            if (hero.shieldLife <= 1 && (enemies.minOfOrNull { it.distance(hero) } ?: Int.MAX_VALUE) < 3000 * 3000 ){
+                heroActions[hero] =
+                    ("SPELL SHIELD ${hero.entityId}")
+                return@forEach
+            }
+
             val minSpider = heroSpider[hero]
             // In the first league: MOVE <x> <y> | WAIT; In later leagues: | SPELL <spellParams>;
             if (minSpider != null) {
@@ -145,7 +157,7 @@ fun main(args: Array<String>) {
                     heroActions[hero] =
                         ("SPELL WIND ${(minSpider.point.x - baseX) * 100} ${(minSpider.point.y - baseY) * 100}")
                 } else {
-                    val startPoint = startPoints[hero.id]
+                    val startPoint = startPoints[hero.idx]
                     if (minSpider.point.distance(base) < startPoint.distance(base) * 2) {
                         heroActions[hero] =
                             ("MOVE ${minSpider.point.x + minSpider.vx} ${minSpider.point.y + minSpider.vy}")
@@ -156,7 +168,7 @@ fun main(args: Array<String>) {
                 }
                 minSpiders.remove(minSpider)
             } else {
-                val startPoint = startPoints[hero.id]
+                val startPoint = startPoints[hero.idx]
                 heroActions[hero] = ("MOVE ${startPoint.x} ${startPoint.y}")
 
             }
