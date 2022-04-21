@@ -8,7 +8,16 @@ import java.util.*
 data class Point(val x: Int, val y: Int)
 data class Hero(val point: Point, val id: Int, val health: Int)
 data class Base(val point: Point)
-data class Spider(val point: Point, val health: Int, val vx: Int, val vy: Int, val nearBase: Int, val threatFor: Int) {
+data class Spider(
+    val point: Point,
+    val health: Int,
+    val vx: Int,
+    val vy: Int,
+    val nearBase: Int,
+    val threatFor: Int,
+    val shieldLife: Int,
+    val isControlled: Int
+) {
     fun distance(hero: Hero): Int {
         return hero.point.distance(this.point)
     }
@@ -91,7 +100,7 @@ fun main(args: Array<String>) {
                 heroY[id] = y
                 heroes.add(Hero(Point(x, y), heroes.size, health))
             } else if (type == 0) {
-                spiders.add(Spider(Point(x, y), health, vx, vy, nearBase, threatFor))
+                spiders.add(Spider(Point(x, y), health, vx, vy, nearBase, threatFor, shieldLife, isControlled))
             }
         }
 
@@ -131,7 +140,7 @@ fun main(args: Array<String>) {
                 val toBaseDistance = minSpider.distance(base)
                 val near = distance < 1280 * 1280 && mana >= 10
                 val wind = toBaseDistance < 5000 * 5000 || mana >= 1200
-                if (near && wind) {
+                if (near && wind && minSpider.shieldLife == 0) {
                     mana -= 10
                     heroActions[hero] =
                         ("SPELL WIND ${(minSpider.point.x - baseX) * 100} ${(minSpider.point.y - baseY) * 100}")
