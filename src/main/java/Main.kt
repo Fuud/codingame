@@ -30,6 +30,20 @@ fun main(args: Array<String>) {
     val input = Scanner(System.`in`)
     val baseX = input.nextInt() // The corner of the map representing your base
     val baseY = input.nextInt()
+
+    val startPoints = listOf(
+        Point(5900, 2000),
+        Point(7600, 7600),
+        Point(2000, 5900),
+    ).map {
+        if (baseX < 3000) {
+            it
+        } else {
+            Point(baseX - it.x, baseY - it.y)
+        }
+    }
+
+
     val base = Point(baseX, baseY)
     var myBaseHealth = 0;
     var enemyMana = 0;
@@ -116,34 +130,25 @@ fun main(args: Array<String>) {
                 val distance = minSpider.distance(hero)
                 val toBaseDistance = minSpider.distance(base)
                 val near = distance < 1280 * 1280 && mana >= 10
-                val wind = toBaseDistance < 5000*5000 || mana >= 60
+                val wind = toBaseDistance < 5000 * 5000 || mana >= 1200
                 if (near && wind) {
                     mana -= 10
                     heroActions[hero] =
                         ("SPELL WIND ${(minSpider.point.x - baseX) * 100} ${(minSpider.point.y - baseY) * 100}")
                 } else {
-                    if (minSpider.point.distance(base) < 10_000 * 10_000) {
+                    val startPoint = startPoints[hero.id]
+                    if (minSpider.point.distance(base) < startPoint.distance(base) * 2) {
                         heroActions[hero] =
                             ("MOVE ${minSpider.point.x + minSpider.vx} ${minSpider.point.y + minSpider.vy}")
                     } else {
-                        heroActions[hero] = ("MOVE ${baseX} ${baseY}")
+
+                        heroActions[hero] = ("MOVE ${startPoint.x} ${startPoint.y}")
                     }
                 }
                 minSpiders.remove(minSpider)
             } else {
-                heroActions[hero] = if (baseX < 3000) {
-                    when (hero.id) {
-                        0 -> ("MOVE 5900 2000")
-                        1 -> ("MOVE 4600 4600")
-                        else -> ("MOVE 2000 5900")
-                    }
-                } else {
-                    when (hero.id) {
-                        0 -> ("MOVE ${baseX - 5900} ${baseY - 2000}")
-                        1 -> ("MOVE ${baseX - 4600} ${baseX - 4600}")
-                        else -> "MOVE ${baseX - 2000} ${baseX - 5900}"
-                    }
-                }
+                val startPoint = startPoints[hero.id]
+                heroActions[hero] = ("MOVE ${startPoint.x} ${startPoint.y}")
 
             }
         }
