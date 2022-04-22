@@ -1,4 +1,4 @@
-import java.util.*
+import java.util.Scanner
 
 /**
  * Auto-generated code below aims at helping you parse
@@ -47,9 +47,9 @@ fun main(args: Array<String>) {
     val baseY = input.nextInt()
 
     val startPoints = listOf(
-        Point(5900, 2000),
-        Point(7600, 7600),
-        Point(2000, 5900),
+        Point(6400, 2400),
+        Point(2600, 2600),
+        Point(2400, 6400),
     ).map {
         if (baseX < 3000) {
             it
@@ -139,9 +139,11 @@ fun main(args: Array<String>) {
         val heroActions = mutableMapOf<Hero, String>()
 
         sortedHeros.forEach { hero ->
-            if (hero.shieldLife <= 1 && (enemies.minOfOrNull { it.distance(hero) } ?: Int.MAX_VALUE) < 3000 * 3000 ){
+            if (hero.shieldLife == 0 && mana >= 10 && (enemies.minOfOrNull { it.distance(hero) }
+                    ?: Int.MAX_VALUE) < 4000 * 4000 && hero.point.distance(base) < 4000 * 4000) {
                 heroActions[hero] =
                     ("SPELL SHIELD ${hero.entityId}")
+                mana -= 10
                 return@forEach
             }
 
