@@ -137,10 +137,22 @@ fun main(args: Array<String>) {
 
         val sortedHeros = heroes.sortedBy { it.point.distance(base) }
         val heroActions = mutableMapOf<Hero, String>()
-
+        val nearSpiderDistance = minSpiders.firstOrNull()?.distance(base) ?: Int.MAX_VALUE
+        val threatSpider = nearSpiderDistance < 3500 * 3500
+        val nearEnemy = enemies.minByOrNull { it.point.distance(base) }
+        val threatEnemy = (nearEnemy?.point?.distance(base) ?: Int.MAX_VALUE) < 4000 * 4000
         sortedHeros.forEach { hero ->
-            if (hero.shieldLife == 0 && mana >= 10 && (enemies.minOfOrNull { it.distance(hero) }
-                    ?: Int.MAX_VALUE) < 4000 * 4000 && hero.point.distance(base) < 4000 * 4000) {
+            if (threatEnemy && nearEnemy!!.shieldLife == 0 && mana >= 10 && nearSpiderDistance< 4500 * 4500 ) {
+                if (nearEnemy.distance(hero) < 1280 * 1280) {
+                    mana -= 10
+                    heroActions[hero] =
+                        ("SPELL WIND ${(nearEnemy.point.x - baseX) * 100} ${(nearEnemy.point.y - baseY) * 100}")
+                    return@forEach
+                }
+            }
+            if (!threatSpider && hero.shieldLife == 0 && mana >= 10 && (enemies.minOfOrNull { it.distance(hero) }
+                    ?: Int.MAX_VALUE) < 4000 * 4000 && hero.point.distance(base) < 4000 * 4000
+            ) {
                 heroActions[hero] =
                     ("SPELL SHIELD ${hero.entityId}")
                 mana -= 10
