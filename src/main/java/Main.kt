@@ -101,27 +101,26 @@ fun main(args: Array<String>) {
             val threatFor =
                 input.nextInt() // Given this monster's trajectory, is it a threat to 1=your base, 2=your opponent's base, 0=neither
 
-            if (type == 1) {
-                heroes.add(Hero(id, Point(x, y), heroes.size, health, shieldLife, isControlled))
-            } else if (type == 2) {
-                enemies.add(Hero(id, Point(x, y), enemies.size, health, shieldLife, isControlled))
-            } else if (type == 0) {
-                spiders.add(Spider(id, Point(x, y), health, vx, vy, nearBase, threatFor, shieldLife, isControlled))
+            when (type) {
+                1 -> heroes.add(Hero(id, Point(x, y), heroes.size, health, shieldLife, isControlled))
+                2 -> enemies.add(Hero(id, Point(x, y), enemies.size, health, shieldLife, isControlled))
+                0 -> spiders.add(Spider(id, Point(x, y), health, vx, vy, nearBase, threatFor, shieldLife, isControlled))
             }
         }
 
         spiders.forEach { spider ->
             if (spider.threatFor == 1) {
-                if (spider.point.distance(base) > 5000) {
+                if (spider.point.distance(base) > d(5000)) {
                     var steps = 0
                     var currentPoint = spider.point
-                    while (currentPoint.distance(base) > 5000) {
+                    while (currentPoint.distance(base) > d(5000)) {
                         steps++
                         currentPoint = Point(currentPoint.x + spider.vx, currentPoint.y + spider.vy)
                     }
                     spider.movesToBase = steps + 12 // todo!
                 } else {
-                    spider.movesToBase = (spider.point.distance(base) - 300) / 400
+                    spider.movesToBase =
+                        kotlin.math.ceil((kotlin.math.sqrt(spider.point.distance(base).toDouble()) - 300) / 400).toInt()
                 }
             }
         }
@@ -135,26 +134,24 @@ fun main(args: Array<String>) {
             heroSpider[hero] = spider;
         }
 
-        val sortedHeros = heroes.sortedBy { it.point.distance(base) }
+        val sortedHeroes = heroes.sortedBy { it.point.distance(base) }
         val heroActions = mutableMapOf<Hero, String>()
         val nearSpiderDistance = minSpiders.firstOrNull()?.distance(base) ?: Int.MAX_VALUE
-        val threatSpider = nearSpiderDistance < 3500 * 3500
+        val threatSpider = nearSpiderDistance < d(3500)
         val nearEnemy = enemies.minByOrNull { it.point.distance(base) }
-        val threatEnemy = (nearEnemy?.point?.distance(base) ?: Int.MAX_VALUE) < 4000 * 4000
-        sortedHeros.forEach { hero ->
-            if (threatEnemy && nearEnemy!!.shieldLife == 0 && mana >= 10 && nearSpiderDistance< 4500 * 4500 ) {
-                if (nearEnemy.distance(hero) < 1280 * 1280) {
+        val threatEnemy = (nearEnemy?.point?.distance(base) ?: Int.MAX_VALUE) < d(4000)
+        sortedHeroes.forEach { hero ->
+            if (threatEnemy && nearEnemy!!.shieldLife == 0 && mana >= 10 && nearSpiderDistance < d(4500)) {
+                if (Wind.inRange(hero, nearEnemy.point)) {
                     mana -= 10
-                    heroActions[hero] =
-                        ("SPELL WIND ${(nearEnemy.point.x - baseX) * 100} ${(nearEnemy.point.y - baseY) * 100}")
+                    heroActions[hero] = Wind.cast((nearEnemy.point.x - baseX) * 100, (nearEnemy.point.y - baseY) * 100)
                     return@forEach
                 }
             }
             if (!threatSpider && hero.shieldLife == 0 && mana >= 10 && (enemies.minOfOrNull { it.distance(hero) }
-                    ?: Int.MAX_VALUE) < 4000 * 4000 && hero.point.distance(base) < 4000 * 4000
+                    ?: Int.MAX_VALUE) < d(4000) && hero.point.distance(base) < d(4000)
             ) {
-                heroActions[hero] =
-                    ("SPELL SHIELD ${hero.entityId}")
+                heroActions[hero] = Shield.cast(hero.entityId)
                 mana -= 10
                 return@forEach
             }
@@ -162,29 +159,24 @@ fun main(args: Array<String>) {
             val minSpider = heroSpider[hero]
             // In the first league: MOVE <x> <y> | WAIT; In later leagues: | SPELL <spellParams>;
             if (minSpider != null) {
-                val distance = minSpider.distance(hero)
                 val toBaseDistance = minSpider.distance(base)
-                val near = distance < 1280 * 1280 && mana >= 10
-                val wind = toBaseDistance < 5000 * 5000 || mana >= 1200
+                val near = Wind.inRange(hero, minSpider.point) && mana >= 10
+                val wind = toBaseDistance < d(5000) || mana >= 1200
                 if (near && wind && minSpider.shieldLife == 0) {
                     mana -= 10
-                    heroActions[hero] =
-                        ("SPELL WIND ${(minSpider.point.x - baseX) * 100} ${(minSpider.point.y - baseY) * 100}")
+                    heroActions[hero] = Wind.cast((minSpider.point.x - baseX) * 100, (minSpider.point.y - baseY) * 100)
                 } else {
                     val startPoint = startPoints[hero.idx]
                     if (minSpider.point.distance(base) < startPoint.distance(base) * 2) {
-                        heroActions[hero] =
-                            ("MOVE ${minSpider.point.x + minSpider.vx} ${minSpider.point.y + minSpider.vy}")
+                        heroActions[hero] = Move.to(minSpider.point.x + minSpider.vx, minSpider.point.y + minSpider.vy)
                     } else {
-
-                        heroActions[hero] = ("MOVE ${startPoint.x} ${startPoint.y}")
+                        heroActions[hero] = Move.to(startPoint)
                     }
                 }
                 minSpiders.remove(minSpider)
             } else {
                 val startPoint = startPoints[hero.idx]
-                heroActions[hero] = ("MOVE ${startPoint.x} ${startPoint.y}")
-
+                heroActions[hero] = Move.to(startPoint)
             }
         }
 
@@ -198,3 +190,37 @@ fun main(args: Array<String>) {
 fun Spider.targetPoint() = Point(this.point.x + this.vx, this.point.y + this.vy)
 fun Point.distance(other: Point) = (this.x - other.x) * (this.x - other.x) + (this.y - other.y) * (this.y - other.y)
 fun log(s: String) = System.err.println(s)
+fun d(d: Int) = d * d
+
+class Wind {
+    companion object {
+        private const val range = 1280
+        fun cast(towards: Point, comment: String = "") = cast(towards.x, towards.y, comment)
+        fun cast(x: Int, y: Int, comment: String = "") = "SPELL WIND $x $y $comment"
+        fun inRange(hero: Hero, point: Point) = hero.point.distance(point) <= range
+    }
+}
+
+class Control {
+    companion object {
+        private const val range = 1280
+        fun cast(entityId: Int, towards: Point, comment: String = "") = "SPELL CONTROL $entityId ${towards.x} ${towards.y} $comment"
+        fun inRange(hero: Hero, point: Point) = hero.point.distance(point) <= range
+    }
+}
+
+class Shield {
+    companion object {
+        private const val range = 2200
+        fun cast(entityId: Int, comment: String = "") = "SPELL SHIELD $entityId $comment"
+        fun inRange(hero: Hero, point: Point) = hero.point.distance(point) <= range
+    }
+}
+
+class Move {
+    companion object {
+        private const val range = 800
+        fun to(towards: Point, comment: String = "") = to(towards.x, towards.y, comment)
+        fun to(x: Int, y: Int, comment: String = "") = "MOVE $x $y $comment"
+    }
+}
