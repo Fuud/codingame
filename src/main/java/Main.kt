@@ -6,25 +6,60 @@ import kotlin.math.sqrt
  * the standard input according to the problem statement.
  **/
 
+const val BOARD_WIDTH = 17630
+const val BOARD_HEIGHT = 9000
+
+var topLeftBase: Boolean = true
+
 data class Point(val x: Int, val y: Int)
-data class Hero(val entityId: Int, val point: Point, val idx: Int, val health: Int, val shieldLife: Int, val isControlled: Int) {
+
+class Hero(
+    val entityId: Int,
+    point: Point,
+    val idx: Int,
+    val health: Int,
+    val shieldLife: Int,
+    val isControlled: Int
+) {
+    val point: Point = if (topLeftBase) {
+        point
+    } else {
+        Point(BOARD_WIDTH - point.x, BOARD_HEIGHT - point.y)
+    }
+
     fun distance(hero: Hero): Distance {
         return point.distance(hero.point)
     }
 }
 
-data class Base(val point: Point)
-data class Spider(
+class Spider(
     val entityId: Int,
-    val point: Point,
+    point: Point,
     val health: Int,
-    val vx: Int,
-    val vy: Int,
+    vx: Int,
+    vy: Int,
     val nearBase: Int,
     val threatFor: Int,
     val shieldLife: Int,
     val isControlled: Int
 ) {
+    val point: Point = if (topLeftBase) {
+        point
+    } else {
+        Point(BOARD_WIDTH - point.x, BOARD_HEIGHT - point.y)
+    }
+
+    val vx: Int = if (topLeftBase) {
+        vx
+    } else {
+        -vx
+    }
+    val vy: Int = if (topLeftBase) {
+        vy
+    } else {
+        -vy
+    }
+
     fun distance(hero: Hero): Distance {
         return hero.point.distance(this.point)
     }
@@ -38,29 +73,21 @@ data class Spider(
 
 var mana: Int = 0
 
-class Game {
-
-}
-
 fun main(args: Array<String>) {
     val input = Scanner(System.`in`)
     val baseX = input.nextInt() // The corner of the map representing your base
     val baseY = input.nextInt()
 
+    topLeftBase = baseX == 0
+
     val startPoints = listOf(
         Point(6400, 2400),
         Point(2600, 2600),
         Point(2400, 6400),
-    ).map {
-        if (baseX < 3000) {
-            it
-        } else {
-            Point(baseX - it.x, baseY - it.y)
-        }
-    }
+    )
 
 
-    val base = Point(baseX, baseY)
+    val base = Point(0, 0)
     var myBaseHealth = 0;
     var enemyMana = 0;
 
@@ -145,7 +172,7 @@ fun main(args: Array<String>) {
             if (threatEnemy && nearEnemy!!.shieldLife == 0 && mana >= 10 && nearSpiderDistance < d(4500)) {
                 if (Wind.inRange(hero, nearEnemy.point)) {
                     mana -= 10
-                    heroActions[hero] = Wind.cast((nearEnemy.point.x - baseX) * 100, (nearEnemy.point.y - baseY) * 100)
+                    heroActions[hero] = Wind.cast((nearEnemy.point.x) * 100, (nearEnemy.point.y) * 100)
                     return@forEach
                 }
             }
@@ -165,7 +192,7 @@ fun main(args: Array<String>) {
                 val wind = toBaseDistance < d(5000) || mana >= 1200
                 if (near && wind && minSpider.shieldLife == 0) {
                     mana -= 10
-                    heroActions[hero] = Wind.cast((minSpider.point.x - baseX) * 100, (minSpider.point.y - baseY) * 100)
+                    heroActions[hero] = Wind.cast((minSpider.point.x) * 100, (minSpider.point.y) * 100)
                 } else {
                     val startPoint = startPoints[hero.idx]
                     if (minSpider.point.distance(base) < startPoint.distance(base) * 2) {
@@ -214,24 +241,32 @@ class Wind {
     companion object {
         private val range = d(1280)
         fun cast(towards: Point, comment: String = "") = cast(towards.x, towards.y, comment)
-        fun cast(x: Int, y: Int, comment: String = "") = "SPELL WIND $x $y $comment"
         fun inRange(hero: Hero, point: Point) = hero.point.distance(point) <= range
+        fun cast(x: Int, y: Int, comment: String = "") = if (topLeftBase) {
+            "SPELL WIND $x $y $comment"
+        } else {
+            "SPELL WIND ${BOARD_WIDTH - x} ${BOARD_HEIGHT - y} $comment"
+        }
     }
 }
 
 class Control {
     companion object {
         private val range = d(1280)
-        fun cast(entityId: Int, towards: Point, comment: String = "") = "SPELL CONTROL $entityId ${towards.x} ${towards.y} $comment"
         fun inRange(hero: Hero, point: Point) = hero.point.distance(point) <= range
+        fun cast(entityId: Int, towards: Point, comment: String = "") = if (topLeftBase) {
+            "SPELL CONTROL $entityId ${towards.x} ${towards.y} $comment"
+        } else {
+            "SPELL CONTROL $entityId ${BOARD_WIDTH - towards.x} ${BOARD_HEIGHT - towards.y} $comment"
+        }
     }
 }
 
 class Shield {
     companion object {
         private val range = d(2200)
-        fun cast(entityId: Int, comment: String = "") = "SPELL SHIELD $entityId $comment"
         fun inRange(hero: Hero, point: Point) = hero.point.distance(point) <= range
+        fun cast(entityId: Int, comment: String = "") = "SPELL SHIELD $entityId $comment"
     }
 }
 
@@ -239,6 +274,10 @@ class Move {
     companion object {
         private val range = d(800)
         fun to(towards: Point, comment: String = "") = to(towards.x, towards.y, comment)
-        fun to(x: Int, y: Int, comment: String = "") = "MOVE $x $y $comment"
+        fun to(x: Int, y: Int, comment: String = "") = if (topLeftBase) {
+            "MOVE $x $y $comment"
+        } else {
+            "MOVE ${BOARD_WIDTH - x} ${BOARD_HEIGHT - y} $comment"
+        }
     }
 }
