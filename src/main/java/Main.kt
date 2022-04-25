@@ -1,4 +1,5 @@
 import java.util.Scanner
+import kotlin.math.sqrt
 
 /**
  * Auto-generated code below aims at helping you parse
@@ -7,7 +8,7 @@ import java.util.Scanner
 
 data class Point(val x: Int, val y: Int)
 data class Hero(val entityId: Int, val point: Point, val idx: Int, val health: Int, val shieldLife: Int, val isControlled: Int) {
-    fun distance(hero: Hero): Int {
+    fun distance(hero: Hero): Distance {
         return point.distance(hero.point)
     }
 }
@@ -24,11 +25,11 @@ data class Spider(
     val shieldLife: Int,
     val isControlled: Int
 ) {
-    fun distance(hero: Hero): Int {
+    fun distance(hero: Hero): Distance {
         return hero.point.distance(this.point)
     }
 
-    fun distance(point: Point): Int {
+    fun distance(point: Point): Distance {
         return point.distance(this.point)
     }
 
@@ -120,7 +121,7 @@ fun main(args: Array<String>) {
                     spider.movesToBase = steps + 12 // todo!
                 } else {
                     spider.movesToBase =
-                        kotlin.math.ceil((kotlin.math.sqrt(spider.point.distance(base).toDouble()) - 300) / 400).toInt()
+                        kotlin.math.ceil((spider.point.distance(base).toDouble() - 300) / 400).toInt()
                 }
             }
         }
@@ -136,10 +137,10 @@ fun main(args: Array<String>) {
 
         val sortedHeroes = heroes.sortedBy { it.point.distance(base) }
         val heroActions = mutableMapOf<Hero, String>()
-        val nearSpiderDistance = minSpiders.firstOrNull()?.distance(base) ?: Int.MAX_VALUE
+        val nearSpiderDistance = minSpiders.firstOrNull()?.distance(base) ?: Distance.MAX_VALUE
         val threatSpider = nearSpiderDistance < d(3500)
         val nearEnemy = enemies.minByOrNull { it.point.distance(base) }
-        val threatEnemy = (nearEnemy?.point?.distance(base) ?: Int.MAX_VALUE) < d(4000)
+        val threatEnemy = (nearEnemy?.point?.distance(base) ?: Distance.MAX_VALUE) < d(4000)
         sortedHeroes.forEach { hero ->
             if (threatEnemy && nearEnemy!!.shieldLife == 0 && mana >= 10 && nearSpiderDistance < d(4500)) {
                 if (Wind.inRange(hero, nearEnemy.point)) {
@@ -149,7 +150,7 @@ fun main(args: Array<String>) {
                 }
             }
             if (!threatSpider && hero.shieldLife == 0 && mana >= 10 && (enemies.minOfOrNull { it.distance(hero) }
-                    ?: Int.MAX_VALUE) < d(4000) && hero.point.distance(base) < d(4000)
+                    ?: Distance.MAX_VALUE) < d(4000) && hero.point.distance(base) < d(4000)
             ) {
                 heroActions[hero] = Shield.cast(hero.entityId)
                 mana -= 10
@@ -188,13 +189,30 @@ fun main(args: Array<String>) {
 }
 
 fun Spider.targetPoint() = Point(this.point.x + this.vx, this.point.y + this.vy)
-fun Point.distance(other: Point) = (this.x - other.x) * (this.x - other.x) + (this.y - other.y) * (this.y - other.y)
+fun Point.distance(other: Point) = Distance((this.x - other.x) * (this.x - other.x) + (this.y - other.y) * (this.y - other.y))
 fun log(s: String) = System.err.println(s)
-fun d(d: Int) = d * d
+fun d(d: Int) = Distance(d * d)
+
+@JvmInline
+value class Distance(val d: Int) : Comparable<Distance> {
+    override fun compareTo(other: Distance): Int {
+        return d - other.d
+    }
+
+    fun toDouble(): Double = sqrt(d.toDouble())
+    operator fun times(i: Int): Distance {
+        return Distance(d * i * i)
+    }
+
+    companion object {
+        val MAX_VALUE = Distance(Integer.MAX_VALUE)
+    }
+
+}
 
 class Wind {
     companion object {
-        private const val range = 1280
+        private val range = d(1280)
         fun cast(towards: Point, comment: String = "") = cast(towards.x, towards.y, comment)
         fun cast(x: Int, y: Int, comment: String = "") = "SPELL WIND $x $y $comment"
         fun inRange(hero: Hero, point: Point) = hero.point.distance(point) <= range
@@ -203,7 +221,7 @@ class Wind {
 
 class Control {
     companion object {
-        private const val range = 1280
+        private val range = d(1280)
         fun cast(entityId: Int, towards: Point, comment: String = "") = "SPELL CONTROL $entityId ${towards.x} ${towards.y} $comment"
         fun inRange(hero: Hero, point: Point) = hero.point.distance(point) <= range
     }
@@ -211,7 +229,7 @@ class Control {
 
 class Shield {
     companion object {
-        private const val range = 2200
+        private val range = d(2200)
         fun cast(entityId: Int, comment: String = "") = "SPELL SHIELD $entityId $comment"
         fun inRange(hero: Hero, point: Point) = hero.point.distance(point) <= range
     }
@@ -219,7 +237,7 @@ class Shield {
 
 class Move {
     companion object {
-        private const val range = 800
+        private val range = d(800)
         fun to(towards: Point, comment: String = "") = to(towards.x, towards.y, comment)
         fun to(x: Int, y: Int, comment: String = "") = "MOVE $x $y $comment"
     }
