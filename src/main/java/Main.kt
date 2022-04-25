@@ -1,4 +1,5 @@
 import java.util.Scanner
+import kotlin.math.min
 import kotlin.math.sqrt
 
 /**
@@ -83,6 +84,8 @@ class Spider(
     fun distance(point: Point): Distance {
         return point.distance(this.point)
     }
+
+    fun distance(spider: Spider): Distance = distance(spider.point)
 
     var movesToBase: Int = Int.MAX_VALUE
 }
@@ -234,6 +237,7 @@ fun main(args: Array<String>) {
             }
 
             val minSpider = heroSpider[hero]
+            var removeSpider = true
             // In the first league: MOVE <x> <y> | WAIT; In later leagues: | SPELL <spellParams>;
             if (minSpider != null) {
                 val toBaseDistance = minSpider.distance(base)
@@ -244,12 +248,26 @@ fun main(args: Array<String>) {
                 } else {
                     val startPoint = startPoints[hero.idx]
                     if (minSpider.point.distance(base) < startPoint.distance(base) * 2) {
-                        heroActions[hero] = Move.to(minSpider.point.x + minSpider.vx, minSpider.point.y + minSpider.vy)
+                        removeSpider = minSpider.movesToBase * 2 > minSpider.health
+                        val otherSpider = spiders.filter { it.distance(minSpider) < d(1500) && it != minSpider }
+                            .maxByOrNull { it.distance(base) }
+                        if (otherSpider != null) {
+                            heroActions[hero] = Move.to(
+                                (minSpider.point.x + otherSpider.point.x) / 2,
+                                (minSpider.point.y + otherSpider.point.y) / 2,
+                                "kill ${minSpider.entityId} and ${otherSpider.entityId}"
+                            )
+                        } else {
+                            heroActions[hero] = Move.to(minSpider, "kill ${minSpider.entityId}")
+                        }
+
                     } else {
-                        heroActions[hero] = Move.to(startPoint)
+                        heroActions[hero] = Move.to(startPoint, "to start")
                     }
                 }
-                minSpiders.remove(minSpider)
+                if (removeSpider){
+                    minSpiders.remove(minSpider)
+                }
             } else {
                 val startPoint = startPoints[hero.idx]
                 heroActions[hero] = Move.to(startPoint)
@@ -271,7 +289,8 @@ private fun processKolya(spiders: List<Spider>, enemies: List<Hero>): String {
     val initialPoints = listOf(
         Point(17050, 1800),
         Point(15000, 6300),
-        Point(10000, 8400)
+        Point(10000, 8400),
+        Point(15000, 6300),
     )
 
     if (initialMarch) {
@@ -315,7 +334,7 @@ private fun processKolya(spiders: List<Spider>, enemies: List<Hero>): String {
             )
             return Control.cast(
                 spiderToControl.entityId,
-                targetPoints.random(),
+                targetPoints.min { spiderToControl.distance(it) },
                 "PODKRADIS`"
             )
         }
@@ -334,7 +353,7 @@ private fun processKolya(spiders: List<Spider>, enemies: List<Hero>): String {
     } else {
         val targetPoint = initialPoints[kolyaDirection]
         if (KOLYA.point.distance(targetPoint) < d(700)) {
-            kolyaDirection = (kolyaDirection + 1).mod(3)
+            kolyaDirection = (kolyaDirection + 1).mod(initialPoints.size)
         }
         return Move.to(targetPoint, "POST")
 
@@ -429,5 +448,9 @@ class Move {
         } else {
             "MOVE ${BOARD_WIDTH - x} ${BOARD_HEIGHT - y} $comment"
         }
+
+        fun to(spider: Spider, comment: String = "") = to(spider.point, comment)
     }
 }
+
+fun List<Int>.mean() = this.sum() / this.size
