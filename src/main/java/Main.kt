@@ -73,6 +73,17 @@ class Spider(
 
 var mana: Int = 0
 
+val heroes = mutableListOf<Hero>()
+
+val VASYA
+    get() = heroes[0]
+
+val PETYA
+    get() = heroes[1]
+
+val KOLYA
+    get() = heroes[2]
+
 fun main(args: Array<String>) {
     val input = Scanner(System.`in`)
     val baseX = input.nextInt() // The corner of the map representing your base
@@ -111,7 +122,7 @@ fun main(args: Array<String>) {
         val entityCount = input.nextInt() // Amount of heros and monsters you can see
 
         val spiders = mutableListOf<Spider>()
-        val heroes = mutableListOf<Hero>()
+        heroes.clear()
         val enemies = mutableListOf<Hero>()
 
         for (i in 0 until entityCount) {
