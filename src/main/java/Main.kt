@@ -1,5 +1,4 @@
 import java.util.Scanner
-import kotlin.math.min
 import kotlin.math.sqrt
 
 /**
@@ -32,7 +31,7 @@ class Hero(
     val idx: Int,
     val health: Int,
     val shieldLife: Int,
-    val isControlled: Int
+    val isControlled: Boolean
 ) {
     val point: Point = if (topLeftBase) {
         point
@@ -58,7 +57,7 @@ class Spider(
     val nearBase: Int,
     val threatFor: Int,
     val shieldLife: Int,
-    val isControlled: Int
+    val isControlled: Boolean
 ) {
     val point: Point = if (topLeftBase) {
         point
@@ -150,7 +149,7 @@ fun main(args: Array<String>) {
             val y = input.nextInt()
             val shieldLife = input.nextInt() // Ignore for this league; Count down until shield spell fades
             val isControlled =
-                input.nextInt() // Ignore for this league; Equals 1 when this entity is under a control spell
+                input.nextInt() == 1 // Ignore for this league; Equals 1 when this entity is under a control spell
             val health = input.nextInt() // Remaining health of this monster
             val vx = input.nextInt() // Trajectory of this monster
             val vy = input.nextInt()
@@ -184,11 +183,11 @@ fun main(args: Array<String>) {
 
         val minSpiders = spiders.sortedBy { it.movesToBase }.take(3).toMutableList()
 
-        val heroSpider = mutableMapOf<Hero, Spider>()
+        val hero2Spider = mutableMapOf<Hero, Spider>()
         minSpiders.forEach { spider ->
-            val hero = heroes.filterNot { heroSpider.containsKey(it) }
+            val hero = heroes.filterNot { hero2Spider.containsKey(it) }
                 .minByOrNull { it.point.distance(spider.point) }!!
-            heroSpider[hero] = spider;
+            hero2Spider[hero] = spider
         }
 
         val heroActions = mutableMapOf<Hero, String>()
@@ -209,6 +208,10 @@ fun main(args: Array<String>) {
         var wasShield = false
 
         sortedHeroes.forEach { hero ->
+            if (hero.isControlled) {
+                heroActions[hero] = controlledWait
+                return@forEach
+            }
             if (threatEnemy && nearEnemy!!.shieldLife == 0 && mana >= 10 && nearSpiderDistance < d(4500) &&
                 Wind.inRange(nearEnemy, minSpider!!)
             ) {
@@ -224,9 +227,7 @@ fun main(args: Array<String>) {
                 }
             }
             if (!wasShield && !threatSpider && hero.shieldLife == 0 && mana >= 40 && (enemies.minOfOrNull {
-                    it.distance(
-                        hero
-                    )
+                    it.distance(hero)
                 }
                     ?: Distance.MAX_VALUE) < d(4000) && hero.point.distance(base) < d(4000)
             ) {
@@ -235,41 +236,40 @@ fun main(args: Array<String>) {
                 return@forEach
             }
 
-            val minSpider = heroSpider[hero]
+            val heroSpider = hero2Spider[hero]
             var removeSpider = true
             // In the first league: MOVE <x> <y> | WAIT; In later leagues: | SPELL <spellParams>;
-            if (minSpider != null) {
-                val toBaseDistance = minSpider.distance(base)
-                val near = Wind.inRange(hero, minSpider.point)
+            if (heroSpider != null) {
+                val toBaseDistance = heroSpider.distance(base)
+                val near = Wind.inRange(hero, heroSpider.point)
                 val wind = toBaseDistance < d(5000) && mana >= 10
-                if (near && wind && minSpider.shieldLife == 0 && minSpider.movesToBase * 2 < minSpider.health + 4) {
+                if (near && wind && heroSpider.shieldLife == 0 && heroSpider.movesToBase * 2 < heroSpider.health + 4) {
                     heroActions[hero] = Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
                 } else {
                     val startPoint = startPoints[hero.idx]
-                    if (minSpider.point.distance(base) < startPoint.distance(base) * 2) {
-                        removeSpider = minSpider.movesToBase * 2 > minSpider.health
-                        val otherSpider = spiders.filter { it.distance(minSpider) < d(1500) && it != minSpider }
+                    if (heroSpider.point.distance(base) < startPoint.distance(base) * 2) {
+                        removeSpider = heroSpider.movesToBase * 2 > heroSpider.health
+                        val otherSpider = spiders.filter { it.distance(heroSpider) < d(1500) && it != heroSpider }
                             .maxByOrNull { it.distance(base) }
                         if (otherSpider != null) {
                             heroActions[hero] = Move.to(
-                                (minSpider.point.x + otherSpider.point.x) / 2,
-                                (minSpider.point.y + otherSpider.point.y) / 2,
-                                "kill ${minSpider.entityId} and ${otherSpider.entityId}"
+                                (heroSpider.point.x + otherSpider.point.x) / 2,
+                                (heroSpider.point.y + otherSpider.point.y) / 2,
+                                "kill ${heroSpider.entityId} and ${otherSpider.entityId}"
                             )
                         } else {
-                            heroActions[hero] = Move.to(minSpider, "kill ${minSpider.entityId}")
+                            heroActions[hero] = Move.to(heroSpider, "kill ${heroSpider.entityId}")
                         }
 
                     } else {
-                        heroActions[hero] = Move.to(startPoint, "to start")
+                        heroActions[hero] = moveToStartPoint(hero, startPoints)
                     }
                 }
                 if (removeSpider){
-                    minSpiders.remove(minSpider)
+                    minSpiders.remove(heroSpider)
                 }
             } else {
-                val startPoint = startPoints[hero.idx]
-                heroActions[hero] = Move.to(startPoint)
+                heroActions[hero] = moveToStartPoint(hero, startPoints)
             }
         }
 
@@ -281,6 +281,9 @@ fun main(args: Array<String>) {
     }
 }
 
+private fun moveToStartPoint(hero: Hero, startPoints: List<Point>) =
+    Move.to(startPoints[hero.idx], "Есть идея")
+
 var initialMarch = true
 
 var kolyaDirection: Int = 0
@@ -291,10 +294,13 @@ private fun processKolya(spiders: List<Spider>, enemies: List<Hero>): String {
         Point(10000, 8400),
         Point(15000, 6300),
     )
+    if (KOLYA.isControlled) {
+        return controlledWait
+    }
 
     if (initialMarch) {
         if (KOLYA.distance(initialPoints[1]) > d(800)) {
-            return Move.to(initialPoints[1], "MARCH! URA!!!")
+            return Move.to(initialPoints[1], "Сарынь на кичку")
         }
         initialMarch = false
     }
@@ -334,7 +340,7 @@ private fun processKolya(spiders: List<Spider>, enemies: List<Hero>): String {
             return Control.cast(
                 spiderToControl.entityId,
                 targetPoints.min { spiderToControl.distance(it) },
-                "PODKRADIS`"
+                "Всё для фронта!"
             )
         }
     }
@@ -358,6 +364,8 @@ private fun processKolya(spiders: List<Spider>, enemies: List<Hero>): String {
 
     }
 }
+
+const val controlledWait = "WAIT Покорен будь судьбе"
 
 private fun <T, R : Comparable<R>> Iterable<T>.min(function: (T) -> R): T {
     return this.minByOrNull(function)!!
