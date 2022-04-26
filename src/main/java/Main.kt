@@ -10,9 +10,9 @@ const val BOARD_WIDTH = 17630
 const val BOARD_HEIGHT = 9000
 const val SPELL_MANA_COST = 10
 
-const val THREAD_FOR_OUR_BASE = 1
-const val THREAD_FOR_ENEMY_BASE = 2
-const val NO_THREAD = 0
+const val THREAT_FOR_OUR_BASE = 1
+const val THREAT_FOR_ENEMY_BASE = 2
+const val NO_THREAT = 0
 
 val enemyBase = Point(
     BOARD_WIDTH,
@@ -171,7 +171,7 @@ fun main(args: Array<String>) {
         }
 
         spiders.forEach { spider ->
-            if (spider.threatFor == 1) {
+            if (spider.threatFor == THREAT_FOR_OUR_BASE) {
                 if (spider.point.distance(base) > d(5000)) {
                     var steps = 0
                     var currentPoint = spider.point
@@ -184,6 +184,10 @@ fun main(args: Array<String>) {
                     spider.movesToBase =
                         kotlin.math.ceil((spider.point.distance(base).toDouble() - 300) / 400).toInt()
                 }
+            } else if (spider.threatFor == THREAT_FOR_ENEMY_BASE) {
+                spider.movesToBase = kotlin.math.ceil(Int.MAX_VALUE - spider.distance(base).toDouble()).toInt()
+            } else {
+                spider.movesToBase = kotlin.math.ceil(Int.MAX_VALUE / 2 - spider.distance(base).toDouble()).toInt()
             }
         }
 
@@ -213,72 +217,64 @@ fun main(args: Array<String>) {
 
         var wasShield = false
 
-        sortedHeroes.forEach { hero ->
+        heroActions.putAll(sortedHeroes.map { hero ->
             if (hero.isControlled) {
-                heroActions[hero] = controlledWait
-                return@forEach
+                return@map hero to controlledWait
             }
             if (threatEnemy && nearEnemy!!.shieldLife == 0 && mana >= 10 && nearSpiderDistance < d(4500) &&
                 Wind.inRange(nearEnemy, minSpider!!)
             ) {
                 if (Wind.inRange(hero, nearEnemy.point) || Wind.inRange(hero, minSpider.point)) {
-                    heroActions[hero] = Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
-                    return@forEach
+                    return@map hero to Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
                 }
             }
             if (threatEnemy && nearEnemy!!.shieldLife == 0 && mana >= 40 && nearSpiderDistance < d(4500)) {
                 if (Wind.inRange(hero, nearEnemy.point)) {
-                    heroActions[hero] = Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
-                    return@forEach
+                    return@map hero to Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
                 }
             }
-            if (!wasShield && !threatSpider && hero.shieldLife == 0 && mana >= 40 && (enemies.minOfOrNull {
-                    it.distance(hero)
-                }
-                    ?: Distance.MAX_VALUE) < d(4000) && hero.point.distance(base) < d(4000)
+            if (!wasShield && !threatSpider && hero.shieldLife == 0 && mana >= 40 &&
+                (enemies.minOfOrNull { it.distance(hero) } ?: Distance.MAX_VALUE) < d(4000) &&
+                hero.point.distance(base) < d(4000)
             ) {
-                heroActions[hero] = Shield.cast(hero.entityId)
                 wasShield = true
-                return@forEach
+                return@map hero to Shield.cast(hero.entityId)
             }
 
             val heroSpider = hero2Spider[hero]
-            var removeSpider = true
             // In the first league: MOVE <x> <y> | WAIT; In later leagues: | SPELL <spellParams>;
             if (heroSpider != null) {
                 val toBaseDistance = heroSpider.distance(base)
                 val near = Wind.inRange(hero, heroSpider.point)
                 val wind = toBaseDistance < d(5000) && mana >= 10
                 if (near && wind && heroSpider.shieldLife == 0 && heroSpider.movesToBase * 2 < heroSpider.health + 4) {
-                    heroActions[hero] = Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
+                    return@map hero to Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
                 } else {
                     val startPoint = startPoints[hero.idx]
                     if (heroSpider.point.distance(base) < startPoint.distance(base) * 2) {
-                        removeSpider = heroSpider.movesToBase * 2 > heroSpider.health
+                        val removeSpider = heroSpider.movesToBase * 2 > heroSpider.health
+                        if (removeSpider) {
+                            minSpiders.remove(heroSpider)
+                        }
                         val otherSpider = spiders.filter { it.distance(heroSpider) < d(1500) && it != heroSpider }
                             .maxByOrNull { it.distance(base) }
                         if (otherSpider != null) {
-                            heroActions[hero] = Move.to(
+                            return@map hero to Move.to(
                                 (heroSpider.point.x + otherSpider.point.x) / 2,
                                 (heroSpider.point.y + otherSpider.point.y) / 2,
                                 "kill ${heroSpider.entityId} and ${otherSpider.entityId}"
                             )
                         } else {
-                            heroActions[hero] = Move.to(heroSpider, "kill ${heroSpider.entityId}")
+                            return@map hero to Move.to(heroSpider, "kill ${heroSpider.entityId}")
                         }
-
                     } else {
-                        heroActions[hero] = moveToStartPoint(hero, startPoints)
+                        return@map hero to moveToStartPoint(hero, startPoints)
                     }
                 }
-                if (removeSpider) {
-                    minSpiders.remove(heroSpider)
-                }
             } else {
-                heroActions[hero] = moveToStartPoint(hero, startPoints)
+                return@map hero to moveToStartPoint(hero, startPoints)
             }
-        }
-
+        }.toMap())
 
         heroes.forEach { hero ->
             println(heroActions[hero])
@@ -372,7 +368,7 @@ object KolyaLateGame {
                 spiders.filter {
                     Control.inRange(it, KOLYA.point) &&
                             it.shieldLife == 0 &&
-                            it.threatFor != THREAD_FOR_ENEMY_BASE &&
+                            it.threatFor != THREAT_FOR_ENEMY_BASE &&
                             it.health > 10
                 }.maxByOrNull { it.health }
             if (spiderToControl != null) {
@@ -390,7 +386,7 @@ object KolyaLateGame {
                 val spiderToMoveToAndControl = spiders.filter {
                     KOLYA.distance(it) < d(FOG_RADIUS) &&
                             it.shieldLife < 2 &&
-                            it.threatFor != THREAD_FOR_ENEMY_BASE &&
+                            it.threatFor != THREAT_FOR_ENEMY_BASE &&
                             it.health > 10
                 }.maxByOrNull { it.health }
 
@@ -410,7 +406,7 @@ object KolyaLateGame {
             spiders.filter {
                 it.distance(
                     enemyBase
-                ) <= d(7000) && it.threatFor != THREAD_FOR_ENEMY_BASE
+                ) <= d(7000) && it.threatFor != THREAT_FOR_ENEMY_BASE
             }
                 .minByOrNull { it.distance(KOLYA) }
 
