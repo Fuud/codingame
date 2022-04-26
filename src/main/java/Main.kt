@@ -111,9 +111,8 @@ fun main(args: Array<String>) {
     topLeftBase = baseX == 0
 
     val startPoints = listOf(
-        Point(6400, 2400),
-        Point(2600, 2600),
-        Point(2400, 6400),
+        Point(3000, 7600),
+        Point(8000, 800)
     )
 
 
