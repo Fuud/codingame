@@ -1,3 +1,6 @@
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 import java.util.Scanner
 import kotlin.math.sqrt
 
@@ -44,6 +47,7 @@ class Hero(
     fun distance(hero: Hero): Distance {
         return point.distance(hero.point)
     }
+
     fun distance(spider: Spider): Distance {
         return point.distance(spider.point)
     }
@@ -91,7 +95,7 @@ class Spider(
 
     fun distance(spider: Spider): Distance = distance(spider.point)
 
-    var movesToBase: Int = Int.MAX_VALUE
+    var movesToBase: Int? = null
 }
 
 var mana: Int = 0
@@ -108,7 +112,15 @@ val KOLYA
     get() = heroes[2]
 
 fun main(args: Array<String>) {
-    val input = Scanner(System.`in`)
+    performGame()
+}
+
+fun performGame(echo: Boolean = true){
+    val input = if (echo){
+        Scanner(TeeInputStream(System.`in`, System.err))
+    }else {
+        Scanner(System.`in`)
+    }
     val baseX = input.nextInt() // The corner of the map representing your base
     val baseY = input.nextInt()
 
@@ -191,7 +203,7 @@ fun main(args: Array<String>) {
             }
         }
 
-        val minSpiders = spiders.sortedBy { it.movesToBase }.take(3).toMutableList()
+        val minSpiders = spiders.filter { it.movesToBase != null }.sortedBy { it.movesToBase }.take(2).toMutableList()
 
         val hero2Spider = mutableMapOf<Hero, Spider>()
         minSpiders.forEach { spider ->
@@ -247,12 +259,13 @@ fun main(args: Array<String>) {
                 val toBaseDistance = heroSpider.distance(base)
                 val near = Wind.inRange(hero, heroSpider.point)
                 val wind = toBaseDistance < d(5000) && mana >= 10
-                if (near && wind && heroSpider.shieldLife == 0 && heroSpider.movesToBase * 2 < heroSpider.health + 4) {
+                val willReachBase = heroSpider.movesToBase?.let { it * 2 < heroSpider.health + 4 } ?: false
+                if (near && wind && heroSpider.shieldLife == 0 && willReachBase) {
                     return@map hero to Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
                 } else {
                     val startPoint = startPoints[hero.idx]
                     if (heroSpider.point.distance(base) < startPoint.distance(base) * 2) {
-                        val removeSpider = heroSpider.movesToBase * 2 > heroSpider.health
+                        val removeSpider = heroSpider.movesToBase?.let { it * 2 > heroSpider.health } ?: false
                         if (removeSpider) {
                             minSpiders.remove(heroSpider)
                         }
@@ -282,6 +295,7 @@ fun main(args: Array<String>) {
 
     }
 }
+
 private fun moveToStartPoint(hero: Hero, startPoints: List<Point>) =
     Move.to(startPoints[hero.idx], "Есть идея")
 
@@ -326,6 +340,9 @@ object KolyaLateGame {
     var initialMarch = true
 
     var kolyaDirection: Int = 0
+
+    var letsCheck: Point? = null
+
     fun processKolyaLateGame(spiders: List<Spider>, enemies: List<Hero>): String {
         val initialPoints = listOf(
             Point(15000, 6300),
@@ -333,9 +350,9 @@ object KolyaLateGame {
             Point(10000, 8400),
             Point(15000, 6300),
         )
-    if (KOLYA.isControlled) {
-        return controlledWait
-    }
+        if (KOLYA.isControlled) {
+            return controlledWait
+        }
 
         if (initialMarch) {
             if (KOLYA.distance(initialPoints[1]) > d(800)) {
@@ -361,6 +378,10 @@ object KolyaLateGame {
             val windySpiders = spiders.filter { it.health > 10 && Wind.inRange(KOLYA, it) }
 
             if (windySpiders.size > 1) {
+                val nearestToBase = windySpiders.min { it.distance(enemyBase) }
+                if (nearestToBase.distance(enemyBase) < d(5000 + Wind.shift)) {
+                    letsCheck = enemyBase
+                }
                 return Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
             }
 
@@ -381,6 +402,10 @@ object KolyaLateGame {
                     targetPoints.min { spiderToControl.distance(it) },
                     "Всё для фронта!"
                 )
+            }
+            letsCheck?.let {
+                letsCheck = null
+                return Move.to(it, "Just curious")
             }
             if (mana > SPELL_MANA_COST * 4) {
                 val spiderToMoveToAndControl = spiders.filter {
@@ -440,7 +465,9 @@ fun Point.distance(other: Point) =
 fun Point.distance(other: Hero) = this.distance(other.point)
 fun Point.distance(other: Spider) = this.distance(other.point)
 
-fun log(s: String) = System.err.println(s)
+fun log(s: Any?) {
+    System.err.println("\n# $s\n")
+}
 fun d(d: Int) = Distance(d * d)
 
 @JvmInline
@@ -463,6 +490,8 @@ value class Distance(val d: Int) : Comparable<Distance> {
 class Wind {
     companion object {
         private val range = d(1280)
+
+        val shift = 1200
         fun cast(towards: Point, comment: String = "") = cast(towards.x, towards.y, comment)
         fun inRange(hero: Hero, point: Point) = hero.point.distance(point) <= range
         fun inRange(hero: Hero, spider: Spider) = inRange(hero, spider.point)
@@ -523,3 +552,61 @@ class Move {
 }
 
 fun List<Int>.mean() = this.sum() / this.size
+class TeeInputStream(private var source: InputStream, private var copySink: OutputStream) : InputStream() {
+    @Throws(IOException::class)
+    override fun read(): Int {
+        val result = source.read()
+        if (result >= 0) {
+            copySink.write(result)
+        }
+        return result
+    }
+
+    @Throws(IOException::class)
+    override fun available(): Int {
+        return source.available()
+    }
+
+    @Throws(IOException::class)
+    override fun close() {
+        source.close()
+    }
+
+    @Synchronized
+    override fun mark(readlimit: Int) {
+        source.mark(readlimit)
+    }
+
+    override fun markSupported(): Boolean {
+        return source.markSupported()
+    }
+
+    @Throws(IOException::class)
+    override fun read(b: ByteArray, off: Int, len: Int): Int {
+        val result = source.read(b, off, len)
+        if (result >= 0) {
+            copySink.write(b, off, result)
+        }
+        return result
+    }
+
+    @Throws(IOException::class)
+    override fun read(b: ByteArray): Int {
+        val result = source.read(b)
+        if (result >= 0) {
+            copySink.write(b, 0, result)
+        }
+        return result
+    }
+
+    @Synchronized
+    @Throws(IOException::class)
+    override fun reset() {
+        source.reset()
+    }
+
+    @Throws(IOException::class)
+    override fun skip(n: Long): Long {
+        return source.skip(n)
+    }
+}
