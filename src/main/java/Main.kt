@@ -376,13 +376,10 @@ object KolyaLateGame {
                 return Shield.cast(shieldSpider)
             }
 
-            val windySpiders = spiders.filter { it.health > 10 && Wind.inRange(KOLYA, it) }
+            val windySpiders = spiders.filter { it.health > 10 && Wind.inRange(KOLYA, it) && it.shieldLife == 0 }
 
             if (windySpiders.size > 1) {
-                val nearestToBase = windySpiders.min { it.distance(enemyBase) }
-                if (nearestToBase.distance(enemyBase) < d(5000 + Wind.shift)) {
-                    letsCheck = enemyBase
-                }
+                letsCheck = enemyBase
                 return Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
             }
 
