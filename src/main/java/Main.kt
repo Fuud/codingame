@@ -95,7 +95,7 @@ class Spider(
 
     fun distance(spider: Spider): Distance = distance(spider.point)
 
-    var movesToBase: Int? = null
+    var movesToBase: Int = Short.MAX_VALUE.toInt()
 }
 
 var mana: Int = 0
@@ -198,9 +198,9 @@ fun performGame(echo: Boolean = true) {
                         kotlin.math.ceil((spider.point.distance(base).toDouble() - 300) / 400).toInt()
                 }
             } else if (spider.threatFor == THREAT_FOR_ENEMY_BASE) {
-                spider.movesToBase = kotlin.math.ceil(Int.MAX_VALUE - spider.distance(base).toDouble()).toInt()
+                spider.movesToBase = kotlin.math.ceil(Short.MAX_VALUE - spider.distance(base).toDouble()).toInt()
             } else {
-                spider.movesToBase = kotlin.math.ceil(Int.MAX_VALUE / 2 - spider.distance(base).toDouble()).toInt()
+                spider.movesToBase = kotlin.math.ceil(Short.MAX_VALUE / 2 - spider.distance(base).toDouble()).toInt()
             }
         }
         val heroActions = mutableMapOf<Hero, String>()
@@ -212,12 +212,16 @@ fun performGame(echo: Boolean = true) {
 
 
         val sortedHeroes = listOf(VASYA, PETYA).sortedBy { it.point.distance(base) }
-        val minSpiders = spiders.filter { it.movesToBase != null }.sortedBy { it.movesToBase }.take(2).toMutableList()
-        val hero2Spider = mutableMapOf<Hero, Spider>()
+        val minSpiders = spiders.sortedBy { it.movesToBase }.take(2).toMutableList()
+        val hero2Spider = mutableMapOf<Hero, Spider?>()
         minSpiders.forEach { spider ->
             val hero = sortedHeroes.filterNot { hero2Spider.containsKey(it) }
                 .minByOrNull { it.point.distance(spider.point) }!!
-            hero2Spider[hero] = spider
+            hero2Spider[hero] = if (spider.movesToBase > 20){
+                spiders.minByOrNull { it.distance(hero) }
+            }else {
+                spider
+            }
         }
 
         val minSpider = minSpiders.firstOrNull()
@@ -262,12 +266,8 @@ fun performGame(echo: Boolean = true) {
                 if (near && wind && heroSpider.shieldLife == 0 && willReachBase) {
                     return@map hero to Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
                 } else {
-                    val startPoint = startPoints[hero.idx]
                     if (heroSpider.point.x < BOARD_WIDTH / 2) {
-                        val removeSpider = heroSpider.movesToBase?.let { it * 2 > heroSpider.health } ?: false
-                        if (removeSpider) {
-                            minSpiders.remove(heroSpider)
-                        }
+                        heroSpider.movesToBase?.let { it * 2 > heroSpider.health } ?: false
                         val otherSpider = spiders.filter { it.distance(heroSpider) < d(1500) && it != heroSpider }
                             .maxByOrNull { it.distance(base) }
                         if (otherSpider != null) {
