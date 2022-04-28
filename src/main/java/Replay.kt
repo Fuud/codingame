@@ -46,7 +46,7 @@ object Replay {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val replayId = "627384758"
+        val replayId = "627399196"
 
         val replayFile = File("replays/$replayId.txt")
 
@@ -76,7 +76,7 @@ object Replay {
                     contentType(ContentType.Application.Json)
                 }.gameResult
 
-            val names = gameInfo.agents.map { it.index to it.codingamer.pseudo }.toMap()
+            val names = gameInfo.agents.map { it.index to (it.codingamer?.pseudo ?: "Boss") }.toMap()
 
             val rendered = gameInfo.copy(frames = gameInfo.frames.map {
                 it.copy(
@@ -145,7 +145,7 @@ data class Game(
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Agent(
     val index: Int,
-    val codingamer: Codingamer
+    val codingamer: Codingamer?
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)

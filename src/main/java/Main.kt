@@ -115,10 +115,10 @@ fun main(args: Array<String>) {
     performGame()
 }
 
-fun performGame(echo: Boolean = true){
-    val input = if (echo){
+fun performGame(echo: Boolean = true) {
+    val input = if (echo) {
         Scanner(TeeInputStream(System.`in`, System.err))
-    }else {
+    } else {
         Scanner(System.`in`)
     }
     val baseX = input.nextInt() // The corner of the map representing your base
@@ -263,7 +263,7 @@ fun performGame(echo: Boolean = true){
                     return@map hero to Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
                 } else {
                     val startPoint = startPoints[hero.idx]
-                    if (heroSpider.point.distance(base) < startPoint.distance(base) * 2) {
+                    if (heroSpider.point.x < BOARD_WIDTH / 2) {
                         val removeSpider = heroSpider.movesToBase?.let { it * 2 > heroSpider.health } ?: false
                         if (removeSpider) {
                             minSpiders.remove(heroSpider)
@@ -340,7 +340,7 @@ object KolyaLateGame {
 
     var kolyaDirection: Int = 0
 
-    var letsCheck: Point? = null
+    var letsCheck: Int = 0
 
     fun processKolyaLateGame(spiders: List<Spider>, enemies: List<Hero>): String {
         val initialPoints = listOf(
@@ -362,7 +362,7 @@ object KolyaLateGame {
 
         if (mana > SPELL_MANA_COST) {
             val shieldSpider = spiders.filter {
-                it.health > 10 &&
+                d(it.health * 2 * 400) > it.distance(enemyBase) &&
                         Shield.inRange(KOLYA, it) &&
                         it.distance(
                             enemyBase
@@ -371,13 +371,14 @@ object KolyaLateGame {
             }.minByOrNull { it.distance(enemyBase) }
 
             if (shieldSpider != null) {
+                letsCheck++
                 return Shield.cast(shieldSpider)
             }
 
             val windySpiders = spiders.filter { it.health > 10 && Wind.inRange(KOLYA, it) && it.shieldLife == 0 }
 
-            if (windySpiders.size > 1) {
-                letsCheck = enemyBase
+            if (windySpiders.size > 1 || windySpiders.any { it.distance(enemyBase) < d(300 + 1200) }) {
+                letsCheck += 2
                 return Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
             }
 
@@ -399,29 +400,45 @@ object KolyaLateGame {
                     "Всё для фронта!"
                 )
             }
-            letsCheck?.let {
-                letsCheck = null
-                return Move.to(it, "Just curious")
+        }
+        if (letsCheck > 0) {
+            letsCheck--
+            val lovelySpiders = spiders.filter {
+                KOLYA.distance(it) < d(FOG_RADIUS) && it.threatFor == THREAT_FOR_ENEMY_BASE
             }
-            if (mana > SPELL_MANA_COST * 4) {
-                val spiderToMoveToAndControl = spiders.filter {
-                    KOLYA.distance(it) < d(FOG_RADIUS) &&
-                            it.shieldLife < 2 &&
-                            it.threatFor != THREAT_FOR_ENEMY_BASE &&
-                            it.health > 10
-                }.maxByOrNull { it.health }
+            moveSafely(enemyBase, lovelySpiders, "Just curious")?.let {
+                return it
+            }
+            return Move.to(enemyBase, "Just curious")
+        }
+        if (mana > SPELL_MANA_COST * 4) {
+            val spiderToMoveToAndControl = spiders.filter {
+                KOLYA.distance(it) < d(FOG_RADIUS) &&
+                        it.shieldLife < 2 &&
+                        it.threatFor != THREAT_FOR_ENEMY_BASE &&
+                        it.health > 10
+            }.maxByOrNull { it.health }
 
-                if (spiderToMoveToAndControl != null) {
-                    return Move.to(
-                        Point(
-                            spiderToMoveToAndControl.point.x + spiderToMoveToAndControl.vx,
-                            spiderToMoveToAndControl.point.y + spiderToMoveToAndControl.vy
-                        ),
-                        "Plan cntr ${spiderToMoveToAndControl.entityId}"
-                    )
+            if (spiderToMoveToAndControl != null) {
+                val lovelySpiders = spiders.filter {
+                    KOLYA.distance(it) < d(FOG_RADIUS) || it == spiderToMoveToAndControl
                 }
+
+                val targetPoint = Point(
+                    spiderToMoveToAndControl.point.x + spiderToMoveToAndControl.vx,
+                    spiderToMoveToAndControl.point.y + spiderToMoveToAndControl.vy
+                )
+                moveSafely(targetPoint, lovelySpiders, "safe spiders, ${spiderToMoveToAndControl.entityId}")?.let {
+                    return it
+                }
+
+                return Move.to(
+                    targetPoint,
+                    "Plan cntr ${spiderToMoveToAndControl.entityId}"
+                )
             }
         }
+
 
         val spiderToAttack =
             spiders.filter {
@@ -441,6 +458,24 @@ object KolyaLateGame {
             return Move.to(targetPoint, "POST")
 
         }
+    }
+
+    private fun moveSafely(targetPoint: Point, lovelySpiders: List<Spider>, comment: String): String? {
+        val points = (-80..80).flatMap { dx ->
+            (-80..80).mapNotNull { dy ->
+                if (dx * dx + dy * dy < 80 * 80) {
+                    val targetPoint = Point(KOLYA.point.x + dx * 10, KOLYA.point.y + dy * 10)
+                    if (lovelySpiders.none { it.distance(targetPoint) < d(800) }) {
+                        targetPoint
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+            }
+        }
+        return points.minByOrNull { it.distance(targetPoint) }?.let { Move.to(it, comment) }
     }
 }
 
@@ -467,6 +502,7 @@ fun log(s: Any?) {
     System.err.flush()
     System.out.flush()
 }
+
 fun d(d: Int) = Distance(d * d)
 
 @JvmInline
