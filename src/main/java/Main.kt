@@ -203,16 +203,6 @@ fun performGame(echo: Boolean = true){
                 spider.movesToBase = kotlin.math.ceil(Int.MAX_VALUE / 2 - spider.distance(base).toDouble()).toInt()
             }
         }
-
-        val minSpiders = spiders.filter { it.movesToBase != null }.sortedBy { it.movesToBase }.take(2).toMutableList()
-
-        val hero2Spider = mutableMapOf<Hero, Spider>()
-        minSpiders.forEach { spider ->
-            val hero = heroes.filterNot { hero2Spider.containsKey(it) }
-                .minByOrNull { it.point.distance(spider.point) }!!
-            hero2Spider[hero] = spider
-        }
-
         val heroActions = mutableMapOf<Hero, String>()
 
 
@@ -222,6 +212,14 @@ fun performGame(echo: Boolean = true){
 
 
         val sortedHeroes = listOf(VASYA, PETYA).sortedBy { it.point.distance(base) }
+        val minSpiders = spiders.filter { it.movesToBase != null }.sortedBy { it.movesToBase }.take(2).toMutableList()
+        val hero2Spider = mutableMapOf<Hero, Spider>()
+        minSpiders.forEach { spider ->
+            val hero = sortedHeroes.filterNot { hero2Spider.containsKey(it) }
+                .minByOrNull { it.point.distance(spider.point) }!!
+            hero2Spider[hero] = spider
+        }
+
         val minSpider = minSpiders.firstOrNull()
         val nearSpiderDistance = minSpider?.distance(base) ?: Distance.MAX_VALUE
         val threatSpider = nearSpiderDistance < d(3500)
