@@ -28,8 +28,14 @@ object Replay {
 
     val httpClient: HttpClient by lazy {
         HttpClient(Apache) {
-            install(HttpCookies){
-                storage = ConstantCookiesStorage(Cookie("cgSession", "ee815596-7143-47b2-9313-cd879439a391", domain = "www.codingame.com"))
+            install(HttpCookies) {
+                storage = ConstantCookiesStorage(
+                    Cookie(
+                        "cgSession",
+                        "ee815596-7143-47b2-9313-cd879439a391",
+                        domain = "www.codingame.com"
+                    )
+                )
             }
 
             install(JsonFeature) {
@@ -40,7 +46,7 @@ object Replay {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val replayId = "627355779"
+        val replayId = "627384758"
 
         val replayFile = File("replays/$replayId.txt")
 
@@ -51,14 +57,12 @@ object Replay {
             replayText
         }
 
-        while (true) {
-            try {
-                System.setIn(input.byteInputStream())
-                logStream = System.out
-                performGame(echo = false)
-            } catch (t: Throwable) {
-                System.err.println(t)
-            }
+        try {
+            System.setIn(input.byteInputStream())
+            logStream = System.out
+            performGame(echo = false)
+        } catch (t: Throwable) {
+            System.err.println(t)
         }
 
     }
@@ -66,10 +70,11 @@ object Replay {
     fun downloadReplay(replayId: String): String {
         return runBlocking {
             //get replay
-            val gameInfo = httpClient.post<ReplayInfo>("https://www.codingame.com/services/gameResult/findInformationById") {
-                body = listOf<Any>(replayId, userId)
-                contentType(ContentType.Application.Json)
-            }.gameResult
+            val gameInfo =
+                httpClient.post<ReplayInfo>("https://www.codingame.com/services/gameResult/findInformationById") {
+                    body = listOf<Any>(replayId, userId)
+                    contentType(ContentType.Application.Json)
+                }.gameResult
 
             val names = gameInfo.agents.map { it.index to it.codingamer.pseudo }.toMap()
 
