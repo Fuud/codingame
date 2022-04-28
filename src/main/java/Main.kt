@@ -144,6 +144,7 @@ fun performGame(echo: Boolean = true){
     // game loop
     while (true) {
         tick++
+        log("tick: $tick")
         for (i in 0 until 2) {
             val health = input.nextInt() // Your base health
             if (i == 0) {
@@ -465,8 +466,11 @@ fun Point.distance(other: Point) =
 fun Point.distance(other: Hero) = this.distance(other.point)
 fun Point.distance(other: Spider) = this.distance(other.point)
 
+var logStream = System.err
 fun log(s: Any?) {
-    System.err.println("\n# $s\n")
+    logStream.println("\n# $s\n")
+    System.err.flush()
+    System.out.flush()
 }
 fun d(d: Int) = Distance(d * d)
 
