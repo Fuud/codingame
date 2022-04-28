@@ -68,6 +68,8 @@ class Spider(
     val shieldLife: Int,
     val isControlled: Boolean
 ) {
+    override fun toString(): String = "spider($entityId,x:${point.x},y:${point.y})"
+
     val point: Point = if (topLeftBase) {
         point
     } else {
@@ -391,9 +393,14 @@ object KolyaLateGame {
 
             run {
                 val windyEnemies = enemies.filter { Wind.inRange(KOLYA, it) }
-                val fightingEnemies = windyEnemies.filter { enemy -> spiders.any { it.distance(enemy) > d(800) } }
+                val fightingEnemies = windyEnemies.filter { enemy -> spiders.any { it.distance(enemy) < d(800) } }
+                val shieldedSpiders = fightingEnemies.any { enemy -> spiders.any { it.distance(enemy) < d(800) && it.shieldLife > 0} }
                 if (fightingEnemies.isNotEmpty()){
-                    return Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
+                    if (shieldedSpiders){
+                        return Wind.cast(Point(0,0))
+                    }else {
+                        return Wind.cast(BOARD_WIDTH, BOARD_HEIGHT)
+                    }
                 }
             }
             val spiderToControl =
@@ -470,7 +477,10 @@ object KolyaLateGame {
             if (KOLYA.point.distance(targetPoint) < d(700)) {
                 kolyaDirection = (kolyaDirection + 1).mod(initialPoints.size)
             }
-            return Move.to(targetPoint, "POST")
+            val lovelySpiders = spiders.filter {
+                KOLYA.distance(it) < d(FOG_RADIUS)
+            }
+            return moveSafely(targetPoint, lovelySpiders, "POST") ?: Move.to(targetPoint, "POST")
 
         }
     }

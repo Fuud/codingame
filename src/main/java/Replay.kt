@@ -32,7 +32,7 @@ object Replay {
                 storage = ConstantCookiesStorage(
                     Cookie(
                         "cgSession",
-                        "ee815596-7143-47b2-9313-cd879439a391",
+                        "4008078f-fdb1-4f0d-81b1-809f2b65430f",
                         domain = "www.codingame.com"
                     )
                 )
@@ -46,7 +46,7 @@ object Replay {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val replayId = "627399196"
+        val replayId = "627603779"
 
         val replayFile = File("replays/$replayId.txt")
 
