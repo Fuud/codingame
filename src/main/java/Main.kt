@@ -9,11 +9,12 @@ import kotlin.math.abs
  **/
 fun main(args: Array<String>) {
     try {
+        var turn = 0
         val input = Scanner(System.`in`)
         val width = input.nextInt()
         val height = input.nextInt()
 
-        var countDownRecycles = 1
+        var builds = 0
         // game loop
         while (true) {
             val myMatter = input.nextInt()
@@ -57,7 +58,7 @@ fun main(args: Array<String>) {
                 tanks = cells.filter { it.owner == ENEMY && it.units > 0 }.map { Tank(it.units, it.point) },
                 recycles = cells.filter { it.owner == ENEMY && it.recycler }.map { Recycle(it.point) },
             )
-            val shouldBuild = countDownRecycles !=0
+            val shouldBuild = builds < Tune.maxBuildCount && turn > Tune.buildsFromTurn
 
             val board = Board(
                 cells.associateBy { it.point }
@@ -77,24 +78,36 @@ fun main(args: Array<String>) {
             System.err.println(bestTargets);
 
             val build = if (shouldBuild) {
-                countDownRecycles--
+                builds++
                 BUILD(point = cells.filter { it.owner == ME && it.units == 0 }
                     .maxByOrNull { it.scrapAmount }!!.point)
             } else {
-               null
+                null
             }
             val move = bestTargets.map {
                 val ourAmount = it.first.amount
                 val enemyAmount = it.second.amount
-                if (it.first.point.distanceTo(it.second.point) == 1 && ourAmount > enemyAmount){
+                if (it.first.point.distanceTo(it.second.point) == 1 && ourAmount > enemyAmount) {
                     MOVE(ourAmount - enemyAmount, it.first.point, it.second.point).toString()
-                }else {
+                } else {
                     MOVE(ourAmount, it.first.point, it.second.point).toString()
                 }
             }
-            val strongTank = us.tanks.maxByOrNull { it.amount }!!
-            val spawn = SPAWN(1, strongTank.point)
-            println((move + spawn + build).filterNotNull().joinToString(separator = ";"))
+            var spawn:SPAWN? = null
+            val strongTank = us.tanks.maxByOrNull { it.amount }
+            if (strongTank != null) {
+                val amount = myMatter / 20
+                if (amount > 0) {
+                     spawn = SPAWN(amount, strongTank.point)
+                }
+            }
+            val command = (move + spawn + build).filterNotNull().joinToString(separator = ";")
+            if (command.isEmpty()) {
+                println("WAIT;")
+            } else {
+                println(command)
+            }
+            turn++
         }
     } catch (t: Throwable) {
         t.printStackTrace()
@@ -146,4 +159,9 @@ data class BUILD(val point: Point) {
 
 data class SPAWN(val number: Int, val point: Point) {
     override fun toString(): String = "SPAWN $number $point"
+}
+
+object Tune {
+    const val maxBuildCount: Int = 2
+    const val buildsFromTurn: Int = 10
 }
