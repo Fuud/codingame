@@ -1,5 +1,6 @@
 import Owner.ENEMY
 import Owner.ME
+import Owner.NEUTRAL
 import java.util.*
 import kotlin.math.abs
 
@@ -37,7 +38,7 @@ fun main(args: Array<String>) {
                         owner = when (owner) {
                             1 -> ME
                             0 -> ENEMY
-                            else -> Owner.NEUTRAL
+                            else -> NEUTRAL
                         },
                         units = units,
                         recycler = recycler == 1,
@@ -69,14 +70,6 @@ fun main(args: Array<String>) {
 
             // Write an action using println()
             // To debug: System.err.println("Debug messages...");
-
-            val bestTargets = us.tanks
-                .map { ourTank -> ourTank to enemy.tanks.minByOrNull { enemyTank -> enemyTank.point.distanceTo(ourTank.point) } }
-                .filter { it.second != null }
-                .map { it.first to it.second!! }
-
-            System.err.println(bestTargets);
-
             val build = if (shouldBuild) {
                 builds++
                 BUILD(point = cells.filter { it.owner == ME && it.units == 0 }
@@ -84,7 +77,35 @@ fun main(args: Array<String>) {
             } else {
                 null
             }
-            val move = bestTargets.map {
+
+            val bestTargets = us.tanks
+                .map { ourTank -> ourTank to enemy.tanks.minByOrNull { enemyTank -> enemyTank.point.distanceTo(ourTank.point) } }
+                .filter { it.second != null }
+                .map { it.first to it.second!! }
+                .sortedByDescending { it.first.point.distanceTo(it.second.point) }
+
+            System.err.println(bestTargets)
+
+            val researchersPart = bestTargets.size / Tune.researchersPart
+            val (attackers, researchers) = if (researchersPart > 0) {
+                val attackers = bestTargets.toMutableList()
+                val researchers = bestTargets.subList(0, researchersPart).map { researcher ->
+                    val point = board.nearResearchCell(researcher.first.point)
+                    if (point != null) {
+                        attackers.remove(researcher)
+                        researcher.first to point
+                    } else {
+                        researcher.first to null
+                    }
+                }.filter {
+                    it.second != null
+                }
+                attackers to researchers
+            } else {
+                bestTargets to emptyList()
+            }
+
+            val attackMoves = attackers.map {
                 val ourAmount = it.first.amount
                 val enemyAmount = it.second.amount
                 if (it.first.point.distanceTo(it.second.point) == 1 && ourAmount > enemyAmount) {
@@ -93,15 +114,18 @@ fun main(args: Array<String>) {
                     MOVE(ourAmount, it.first.point, it.second.point).toString()
                 }
             }
-            var spawn:SPAWN? = null
-            val strongTank = us.tanks.maxByOrNull { it.amount }
+
+            val researchMoves = researchers.map { MOVE(it.first.amount, it.first.point, it.second!!).toString() }
+
+            var spawn: SPAWN? = null
+            val strongTank = us.tanks.filter { tank -> researchers.none { it.first == tank } }.maxByOrNull { it.amount }
             if (strongTank != null) {
                 val amount = myMatter / 20
                 if (amount > 0) {
-                     spawn = SPAWN(amount, strongTank.point)
+                    spawn = SPAWN(amount, strongTank.point)
                 }
             }
-            val command = (move + spawn + build).filterNotNull().joinToString(separator = ";")
+            val command = (attackMoves + researchMoves + spawn + build).filterNotNull().joinToString(separator = ";")
             if (command.isEmpty()) {
                 println("WAIT;")
             } else {
@@ -130,7 +154,14 @@ data class Point(val x: Int, val y: Int) {
 
 data class Recycle(val point: Point)
 
-data class Board(val cells: Map<Point, Cell>)
+data class Board(val cells: Map<Point, Cell>) {
+    fun nearResearchCell(point: Point): Point? {
+        val neighbors = listOf(-1 to 0, 1 to 0, 0 to 1, 0 to -1)
+            .map { Point(point.x + it.first, point.y + it.second) }
+        return neighbors.firstOrNull { cells[it]?.owner == ENEMY && ((cells[it]?.scrapAmount ?: 0) > 0) }
+            ?: neighbors.firstOrNull { cells[it]?.owner == NEUTRAL && ((cells[it]?.scrapAmount ?: 0) > 0) }
+    }
+}
 
 data class Cell(
     val point: Point,
@@ -140,7 +171,7 @@ data class Cell(
     val recycler: Boolean,
     val canBuild: Boolean,
     val canSpawn: Boolean,
-    val inRangeOfRecycler: Boolean
+    val inRangeOfRecycler: Boolean,
 )
 
 enum class Owner {
@@ -162,6 +193,7 @@ data class SPAWN(val number: Int, val point: Point) {
 }
 
 object Tune {
-    const val maxBuildCount: Int = 2
-    const val buildsFromTurn: Int = 10
+    const val maxBuildCount: Int = 3
+    const val buildsFromTurn: Int = 20
+    const val researchersPart: Int = 2
 }
