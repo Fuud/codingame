@@ -1,6 +1,7 @@
 import Owner.ENEMY
 import Owner.ME
 import Owner.NEUTRAL
+import Tune.spawnPart
 import java.util.*
 import kotlin.math.abs
 
@@ -70,13 +71,6 @@ fun main(args: Array<String>) {
 
             // Write an action using println()
             // To debug: System.err.println("Debug messages...");
-            val build = if (shouldBuild) {
-                builds++
-                BUILD(point = cells.filter { it.owner == ME && it.units == 0 }
-                    .maxByOrNull { it.scrapAmount }!!.point)
-            } else {
-                null
-            }
 
             val bestTargets = us.tanks
                 .map { ourTank -> ourTank to enemy.tanks.minByOrNull { enemyTank -> enemyTank.point.distanceTo(ourTank.point) } }
@@ -117,14 +111,54 @@ fun main(args: Array<String>) {
 
             val researchMoves = researchers.map { MOVE(it.first.amount, it.first.point, it.second!!).toString() }
 
-            var spawn: SPAWN? = null
-            val strongTank = us.tanks.filter { tank -> researchers.none { it.first == tank } }.maxByOrNull { it.amount }
-            if (strongTank != null) {
-                val amount = myMatter / 20
-                if (amount > 0) {
-                    spawn = SPAWN(amount, strongTank.point)
+            val spawn = mutableListOf<SPAWN>()
+            val closeAttackers = attackers.filter { it.first.point.distanceTo(it.second.point) == 1 }.toMutableList()
+            val researchCells = cells
+                .filter { it.canSpawn && board.nearResearchCell(it.point) != null }
+                .toList().toMutableList()
+            val buildCell = cells
+                .filter { it.canBuild && board.nearEnemyCell(it.point) != null }
+                .toList().toMutableList()
+
+            closeAttackers.shuffle()
+            researchCells.shuffle()
+            buildCell.shuffle()
+
+            var matterCounter = 0
+            val size = minOf(myMatter / spawnPart, closeAttackers.size)
+            var i = 0
+            while (matterCounter in 0..size) {
+                if (closeAttackers.isNotEmpty()) {
+                    val point = closeAttackers[i % closeAttackers.size].first.point
+                    spawn.add(SPAWN(1, point))
+                    matterCounter = matterCounter + 10
+                    i++
+                }else {
+                    break;
                 }
             }
+
+            i = 0
+            while (matterCounter in 0..myMatter) {
+                if (researchCells.isNotEmpty()) {
+                    val point = researchCells[i % researchCells.size].point
+                    spawn.add(SPAWN(1, point))
+                    matterCounter = matterCounter + 10
+                    i++
+                }else {
+                    break;
+                }
+            }
+
+            i = 0
+            val build = if (shouldBuild && i < buildCell.size) {
+                builds++
+                BUILD(point = buildCell[i].point)
+            } else {
+                null
+            }
+
+
             val command = (attackMoves + researchMoves + spawn + build).filterNotNull().joinToString(separator = ";")
             if (command.isEmpty()) {
                 println("WAIT;")
@@ -161,6 +195,15 @@ data class Board(val cells: Map<Point, Cell>) {
         return neighbors.firstOrNull { cells[it]?.owner == ENEMY && ((cells[it]?.scrapAmount ?: 0) > 0) }
             ?: neighbors.firstOrNull { cells[it]?.owner == NEUTRAL && ((cells[it]?.scrapAmount ?: 0) > 0) }
     }
+
+    fun nearEnemyCell(point: Point): Point? {
+        val neighbors = listOf(-1 to 0, 1 to 0, 0 to 1, 0 to -1)
+            .map { Point(point.x + it.first, point.y + it.second) }
+        return neighbors.firstOrNull {
+            cells[it]?.owner == ENEMY
+                    && ((cells[it]?.scrapAmount ?: 0) > 0) && (cells[it]?.units ?: 0) > 0
+        }
+    }
 }
 
 data class Cell(
@@ -193,7 +236,8 @@ data class SPAWN(val number: Int, val point: Point) {
 }
 
 object Tune {
-    const val maxBuildCount: Int = 3
-    const val buildsFromTurn: Int = 20
-    const val researchersPart: Int = 2
+    const val maxBuildCount: Int = 10
+    const val buildsFromTurn: Int = 5
+    const val researchersPart: Int = 1
+    const val spawnPart: Int = 3
 }
