@@ -1,9 +1,12 @@
 import Owner.ENEMY
 import Owner.ME
 import Owner.NEUTRAL
+import Tune.buildPart
+import Tune.buildsPerTurn
 import Tune.spawnPart
 import java.util.*
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Auto-generated code below aims at helping you parse
@@ -80,16 +83,26 @@ fun main(args: Array<String>) {
 
             System.err.println(bestTargets)
 
-            val researchersPart = bestTargets.size / Tune.researchersPart
+            val spawn = mutableListOf<String>()
+            var matterCounter = 0
+            val researchersPart = (bestTargets.size * Tune.researchersPart).roundToInt()
+
             val (attackers, researchers) = if (researchersPart > 0) {
                 val attackers = bestTargets.toMutableList()
                 val researchers = bestTargets.subList(0, researchersPart).map { researcher ->
-                    val point = board.nearResearchCell(researcher.first.point)
+                    val tooFarTank = researcher.first
+                    var point = board.nearEnemyTerritoryCell(tooFarTank.point)
                     if (point != null) {
                         attackers.remove(researcher)
-                        researcher.first to point
+                        tooFarTank to point
                     } else {
-                        researcher.first to null
+                        point = board.nearResearchCell(tooFarTank.point)
+                        if (point != null) {
+                            attackers.remove(researcher)
+                            tooFarTank to point
+                        } else {
+                            tooFarTank to null
+                        }
                     }
                 }.filter {
                     it.second != null
@@ -111,7 +124,6 @@ fun main(args: Array<String>) {
 
             val researchMoves = researchers.map { MOVE(it.first.amount, it.first.point, it.second!!).toString() }
 
-            val spawn = mutableListOf<SPAWN>()
             val closeAttackers = attackers.filter { it.first.point.distanceTo(it.second.point) == 1 }.toMutableList()
             val researchCells = cells
                 .filter { it.canSpawn && board.nearResearchCell(it.point) != null }
@@ -122,18 +134,35 @@ fun main(args: Array<String>) {
 
             closeAttackers.shuffle()
             researchCells.shuffle()
-            buildCell.shuffle()
+            buildCell.sortBy { it.scrapAmount }
 
-            var matterCounter = 0
-            val size = minOf(myMatter / spawnPart, closeAttackers.size)
+
             var i = 0
+
+            val build = mutableListOf<String>()
+            if (shouldBuild) {
+                val buildPerTurn = minOf((myMatter * buildPart).roundToInt(), 10 * (buildCell.size), 10 * buildsPerTurn)
+                while (matterCounter in 0..buildPerTurn) {
+                    if (buildCell.isNotEmpty()) {
+                        builds++
+                        build.add(BUILD(point = buildCell[i].point).toString())
+                        i++
+                        matterCounter = matterCounter + 10
+                    } else {
+                        break
+                    }
+                }
+            }
+
+            val size = minOf((myMatter * spawnPart).roundToInt(), 10 * (closeAttackers.size))
+            i = 0
             while (matterCounter in 0..size) {
                 if (closeAttackers.isNotEmpty()) {
                     val point = closeAttackers[i % closeAttackers.size].first.point
-                    spawn.add(SPAWN(1, point))
+                    spawn.add(SPAWN(1, point).toString())
                     matterCounter = matterCounter + 10
                     i++
-                }else {
+                } else {
                     break;
                 }
             }
@@ -142,20 +171,12 @@ fun main(args: Array<String>) {
             while (matterCounter in 0..myMatter) {
                 if (researchCells.isNotEmpty()) {
                     val point = researchCells[i % researchCells.size].point
-                    spawn.add(SPAWN(1, point))
+                    spawn.add(SPAWN(1, point).toString())
                     matterCounter = matterCounter + 10
                     i++
-                }else {
+                } else {
                     break;
                 }
-            }
-
-            i = 0
-            val build = if (shouldBuild && i < buildCell.size) {
-                builds++
-                BUILD(point = buildCell[i].point)
-            } else {
-                null
             }
 
 
@@ -190,19 +211,31 @@ data class Recycle(val point: Point)
 
 data class Board(val cells: Map<Point, Cell>) {
     fun nearResearchCell(point: Point): Point? {
-        val neighbors = listOf(-1 to 0, 1 to 0, 0 to 1, 0 to -1)
+        val neighbors = near()
             .map { Point(point.x + it.first, point.y + it.second) }
         return neighbors.firstOrNull { cells[it]?.owner == ENEMY && ((cells[it]?.scrapAmount ?: 0) > 0) }
             ?: neighbors.firstOrNull { cells[it]?.owner == NEUTRAL && ((cells[it]?.scrapAmount ?: 0) > 0) }
     }
 
+    fun nearEnemyTerritoryCell(point: Point): Point? {
+        val neighbors = near()
+            .map { Point(point.x + it.first, point.y + it.second) }
+        return neighbors.firstOrNull { cells[it]?.owner == ENEMY && cells[it]?.units == 0 }
+    }
+
     fun nearEnemyCell(point: Point): Point? {
-        val neighbors = listOf(-1 to 0, 1 to 0, 0 to 1, 0 to -1)
+        val neighbors = near()
             .map { Point(point.x + it.first, point.y + it.second) }
         return neighbors.firstOrNull {
             cells[it]?.owner == ENEMY
                     && ((cells[it]?.scrapAmount ?: 0) > 0) && (cells[it]?.units ?: 0) > 0
         }
+    }
+
+    private fun near(): List<Pair<Int, Int>> {
+        val listOf = mutableListOf(-1 to 0, 1 to 0, 0 to 1, 0 to -1)
+        listOf.shuffle()
+        return listOf
     }
 }
 
@@ -236,8 +269,10 @@ data class SPAWN(val number: Int, val point: Point) {
 }
 
 object Tune {
-    const val maxBuildCount: Int = 10
+    const val maxBuildCount: Int = 100
     const val buildsFromTurn: Int = 5
-    const val researchersPart: Int = 1
-    const val spawnPart: Int = 3
+    const val buildsPerTurn: Int = 3
+    const val researchersPart: Double = 0.75
+    const val spawnPart: Double = 0.5
+    const val buildPart: Double = 0.25
 }
