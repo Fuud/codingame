@@ -141,7 +141,7 @@ fun main(args: Array<String>) {
 
             val build = mutableListOf<String>()
             if (shouldBuild) {
-                val buildPerTurn = minOf((myMatter * buildPart).roundToInt(), 10 * (buildCell.size), 10 * buildsPerTurn)
+                val buildPerTurn = minOf((myMatter * buildPart).roundToInt(), 10 * (buildCell.size - 1), 10 * buildsPerTurn)
                 while (matterCounter in 0..buildPerTurn) {
                     if (buildCell.isNotEmpty()) {
                         builds++
@@ -273,6 +273,6 @@ object Tune {
     const val buildsFromTurn: Int = 5
     const val buildsPerTurn: Int = 3
     const val researchersPart: Double = 0.75
-    const val spawnPart: Double = 0.5
+    const val spawnPart: Double = 0.75
     const val buildPart: Double = 0.25
 }
