@@ -1,6 +1,7 @@
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.lang.Integer.max
 import java.util.*
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -21,10 +22,22 @@ fun performGame() {
         input.nextLine()
     }
 
+    data class GameScore(val gold: Int, val silver: Int, val bronze: Int)
+    data class PlayerScore(val sum: Int, val games: List<GameScore>)
+
     // game loop
     while (true) {
-        for (i in 0 until 3) {
-            val scoreInfo = input.nextLine()
+        var playerScores = (0 until 3).map {
+            PlayerScore(
+                input.nextInt(),
+                (1..4).map {
+                    GameScore(
+                        input.nextInt(),
+                        input.nextInt(),
+                        input.nextInt(),
+                    )
+                }
+            )
         }
 
         val miniGames = mutableListOf<MiniGame>()
@@ -46,7 +59,7 @@ fun performGame() {
                             HurdleRacePlayer(2, reg2, reg5)
                         ), gpu
                     )
-                    System.err.println(hurdleRace)
+                    System.err.println("#$hurdleRace")
                     miniGames.add(hurdleRace)
                 }
 
@@ -74,7 +87,7 @@ fun performGame() {
                         gpu,
                         reg6
                     )
-                    System.err.println(game)
+                    System.err.println("#$game")
                     miniGames.add(game)
                 }
 
@@ -86,17 +99,16 @@ fun performGame() {
                             DiverPlayer(2, reg2, reg5)
                         ), gpu
                     )
-                    System.err.println(game)
+                    System.err.println("#$game")
                     miniGames.add(game)
                 }
             }
         }
         input.nextLine()
-//        println(miniGames.filterIsInstance<HurdleRace>().single().next())
-//        println(miniGames.filterIsInstance<Archery>().single().next())
-        println(miniGames.filterIsInstance<Roller>().single().next())
-//        println(miniGames.filterIsInstance<Diving>().single().next())
 
+        var (ourScores, gameScores) = playerScores[0]
+        val bestGame = gameScores.indexOf(gameScores.minBy { it.gold * 3 + it.silver })
+        println(miniGames[bestGame].next())
     }
 }
 
@@ -116,7 +128,7 @@ data class HurdleRace(val id: Int, val hurdleRacePlayers: List<HurdleRacePlayer>
         val ourPos = hurdleRacePlayers[0].position
         val index = nextHurdle(ourPos)
         val delta = index - ourPos
-        System.err.println("$delta:$player")
+        System.err.println("#$delta:$player")
         return when (delta) {
             1 -> Direction.UP
             2 -> Direction.LEFT
@@ -128,26 +140,64 @@ data class HurdleRace(val id: Int, val hurdleRacePlayers: List<HurdleRacePlayer>
 }
 
 data class Archery(val id: Int, val players: List<ArcheryPlayer>, val field: String) : MiniGame {
+
+    data class Point private constructor(val x: Int, val y: Int, val ignored: Int) {
+        constructor(x: Int, y: Int) : this(max(-20, min(20, x)), max(-20, min(20, y)), 0)
+    }
+
+    class ArcheryField {
+        val array: MutableMap<Point, Double> = mutableMapOf();
+    }
+
     override fun next(): Direction {
-        TODO("Not yet implemented")
-
-
-    fun next(player:ArcheryPlayer) :Direction {
         val steps = field.length
-        val array: Array<Array<Array<Double>>> = Array(steps) { _ -> Array(41) { _ -> Array(41) { _ -> 0.0 } } }
-        for (s in 0..steps) {
-            for (x in -20..20) {
-                for (y in -20..20) {
-                    if (s == 0) {
-                        array[steps - s][x - 20][y - 20] = sqrt(x * x.toDouble() + y * y)
-                    } else {
-                        val strength: Int = field[s] - '0'
-                        array[steps -s][x - 20][y - 20] = min()
+        var prevField: ArcheryField? = null;
+        val array: Array<ArcheryField> = Array(steps + 1) { step ->
+            ArcheryField().apply {
+                val map = array
+                if (prevField == null) {
+                    for (s in 0..steps) {
+                        for (x in -20..20) {
+                            for (y in -20..20) {
+                                map[Point(x, y)] = sqrt(x * x.toDouble() + y * y)
+                            }
+                        }
+                    }
+                } else {
+                    val prevMap = prevField!!.array
+                    for (x in -20..20) {
+                        for (y in -20..20) {
+                            val strength: Int = field[steps - step] - '0'
+                            val r = prevMap[Point(x + strength, y)]!!;
+                            val l = prevMap[Point(x - strength, y)]!!;
+                            val d = prevMap[Point(x, y + strength)]!!;
+                            val u = prevMap[Point(x, y - strength)]!!;
+
+                            val m = min(min(r, l), min(d, u))
+                            map[Point(x, y)] = m
+                        }
                     }
                 }
+                prevField = this;
             }
         }
-    }
+        val player = players[0]
+        var best = array.last().array[Point(player.x, player.y)]
+        val strength: Int = field[0] - '0'
+        val prevMap = array[array.size - 2].array
+        val r = prevMap[Point(player.x + strength, player.y)]!!;
+        val l = prevMap[Point(player.x - strength, player.y)]!!;
+        val d = prevMap[Point(player.x, player.y + strength)]!!;
+        val u = prevMap[Point(player.x, player.y - strength)]!!;
+
+        return when (best) {
+            r -> Direction.RIGHT;
+            l -> Direction.LEFT;
+            u -> Direction.UP;
+            d -> Direction.DOWN;
+            else -> throw IllegalStateException("aaaa");
+        }
+
     }
 }
 
