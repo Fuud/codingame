@@ -3,6 +3,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.lang.Integer.max
 import java.util.*
+import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.min
 import kotlin.math.sqrt
 
@@ -11,7 +12,11 @@ import kotlin.math.sqrt
  * the standard input according to the problem statement.
  **/
 fun main() {
-    performGame()
+    try{
+        performGame()
+    }catch (t: Throwable){
+        t.printStackTrace()
+    }
 }
 
 fun performGame() {
@@ -53,7 +58,7 @@ fun performGame() {
             when (i) {
                 0 -> {
                     val hurdleRace = HurdleRace(
-                        i, listOf(
+                        playerIdx, i, listOf(
                             HurdleRacePlayer(0, reg0, reg3),
                             HurdleRacePlayer(1, reg1, reg4),
                             HurdleRacePlayer(2, reg2, reg5)
@@ -66,7 +71,7 @@ fun performGame() {
                 1 -> {
                     val archery =
                         Archery(
-                            i,
+                            playerIdx, i,
                             listOf(
                                 ArcheryPlayer(0, reg0, reg1),
                                 ArcheryPlayer(1, reg2, reg3),
@@ -79,7 +84,7 @@ fun performGame() {
 
                 2 -> {
                     val game = Roller(
-                        i, listOf(
+                        playerIdx, i, listOf(
                             RollerPlayer(0, reg0, reg3),
                             RollerPlayer(1, reg1, reg4),
                             RollerPlayer(2, reg2, reg5)
@@ -106,9 +111,11 @@ fun performGame() {
         }
         input.nextLine()
 
-        var (ourScores, gameScores) = playerScores[0]
+        var (ourScores, gameScores) = playerScores[playerIdx]
         val bestGame = gameScores.indexOf(gameScores.minBy { it.gold * 3 + it.silver })
+        System.err.println("# will play game $bestGame")
         println(miniGames[bestGame].next())
+        miniGames.forEach{ it.next() }
     }
 }
 
@@ -121,11 +128,11 @@ interface MiniGame {
     fun next(): Direction
 }
 
-data class HurdleRace(val id: Int, val hurdleRacePlayers: List<HurdleRacePlayer>, val field: String) : MiniGame {
+data class HurdleRace(val playerIdx: Int, val id: Int, val hurdleRacePlayers: List<HurdleRacePlayer>, val field: String) : MiniGame {
     fun nextHurdle(pos: Int): Int = field.indexOf('#', pos + 1)
     override fun next(): Direction {
-        val player = hurdleRacePlayers[0]
-        val ourPos = hurdleRacePlayers[0].position
+        val player = hurdleRacePlayers[playerIdx]
+        val ourPos = hurdleRacePlayers[playerIdx].position
         val index = nextHurdle(ourPos)
         val delta = index - ourPos
         System.err.println("#$delta:$player")
@@ -139,7 +146,7 @@ data class HurdleRace(val id: Int, val hurdleRacePlayers: List<HurdleRacePlayer>
 
 }
 
-data class Archery(val id: Int, val players: List<ArcheryPlayer>, val field: String) : MiniGame {
+data class Archery(val playerIdx:Int, val id: Int, val players: List<ArcheryPlayer>, val field: String) : MiniGame {
 
     data class Point private constructor(val x: Int, val y: Int, val ignored: Int) {
         constructor(x: Int, y: Int) : this(max(-20, min(20, x)), max(-20, min(20, y)), 0)
@@ -181,7 +188,7 @@ data class Archery(val id: Int, val players: List<ArcheryPlayer>, val field: Str
                 prevField = this;
             }
         }
-        val player = players[0]
+        val player = players[playerIdx]
         var best = array.last().array[Point(player.x, player.y)]
         val strength: Int = field[0] - '0'
         val prevMap = array[array.size - 2].array
@@ -201,15 +208,15 @@ data class Archery(val id: Int, val players: List<ArcheryPlayer>, val field: Str
     }
 }
 
-data class Roller(val id: Int, val players: List<RollerPlayer>, val field: String, val leftSteps: Int) : MiniGame {
+data class Roller(val playerIdx: Int, val id: Int, val players: List<RollerPlayer>, val field: String, val leftSteps: Int) : MiniGame {
     override fun next(): Direction {
-        val player = players[0]
-        val riskDirection = if (player.risk >= 4) {
+        val player = players[playerIdx]
+        val riskDirection = if (player.risk >= 4 - ThreadLocalRandom.current().nextInt(6)/5) {
             0
         } else if (player.risk == 3) {
             1
         } else if (player.risk == 2) {
-            2
+            3
         } else /*if (player.risk == 1)*/ {
             3
         }
