@@ -32,17 +32,62 @@ fun performGame() {
             val reg4 = input.nextInt()
             val reg5 = input.nextInt()
             val reg6 = input.nextInt()
-            if (i == 0) {
-                val hurdleRace =
-                    HurdleRace(i, listOf(Player(0, reg0, reg3), Player(1, reg1, reg4), Player(2, reg2, reg5)), gpu)
-                System.err.println(hurdleRace)
-                miniGames.add(hurdleRace)
+            when (i) {
+                0 -> {
+                    val hurdleRace = HurdleRace(
+                        i, listOf(
+                            HurdleRacePlayer(0, reg0, reg3),
+                            HurdleRacePlayer(1, reg1, reg4),
+                            HurdleRacePlayer(2, reg2, reg5)
+                        ), gpu
+                    )
+                    System.err.println(hurdleRace)
+                    miniGames.add(hurdleRace)
+                }
+
+                1 -> {
+                    val archery =
+                        Archery(
+                            i,
+                            listOf(
+                                ArcheryPlayer(0, reg0, reg1),
+                                ArcheryPlayer(1, reg2, reg3),
+                                ArcheryPlayer(2, reg4, reg5)
+                            ),
+                            gpu
+                        )
+                    miniGames.add(archery)
+                }
+
+                2 -> {
+                    val game = Roller(
+                        i, listOf(
+                            RollerPlayer(0, reg0, reg3),
+                            RollerPlayer(1, reg1, reg4),
+                            RollerPlayer(2, reg2, reg5)
+                        ), gpu
+                    )
+                    System.err.println(game)
+                    miniGames.add(game)
+                }
+
+                else -> {
+                    val game = Diving(
+                        i, listOf(
+                            DiverPlayer(0, reg0, reg3),
+                            DiverPlayer(1, reg1, reg4),
+                            DiverPlayer(2, reg2, reg5)
+                        ), gpu
+                    )
+                    System.err.println(game)
+                    miniGames.add(game)
+                }
             }
         }
         input.nextLine()
         val delta = miniGames.filterIsInstance<HurdleRace>(). map { board ->
-                val player = board.players[0]!!
-                val ourPos = board.players[0]!!.position
+            val player = board.hurdleRacePlayers[0]!!
+            val ourPos = board.hurdleRacePlayers[0]!!.position
                 val index = board.nextHurdle(ourPos)
                 val delta = index - ourPos
                 System.err.println("$delta:$player")
@@ -63,19 +108,35 @@ fun performGame() {
     }
 }
 
-data class Player(val id: Int, val position: Int, val stunned: Int) {
-
-}
+data class HurdleRacePlayer(val id: Int, val position: Int, val stunned: Int)
+data class ArcheryPlayer(val id: Int, val x: Int, val y: Int)
+data class RollerPlayer(val id: Int, val distance: Int, val risk: Int)
+data class DiverPlayer(val id: Int, val points: Int, val combo: Int)
 
 interface MiniGame {
     fun next(): Direction
 }
 
-data class HurdleRace(val id: Int, val players: List<Player>, val field: String) : MiniGame {
+data class HurdleRace(val id: Int, val hurdleRacePlayers: List<HurdleRacePlayer>, val field: String) : MiniGame {
     fun nextHurdle(pos: Int): Int = field.indexOf('#', pos + 1)
     override fun next() =
         TODO("Not yet implemented")
 
+}
+
+data class Archery(val id: Int, val players: List<ArcheryPlayer>, val field: String) : MiniGame {
+    override fun next() =
+        TODO("Not yet implemented")
+}
+
+data class Roller(val id: Int, val players: List<RollerPlayer>, val field: String) : MiniGame {
+    override fun next() =
+        TODO("Not yet implemented")
+}
+
+data class Diving(val id: Int, val players: List<DiverPlayer>, val field: String) : MiniGame {
+    override fun next() =
+        TODO("Not yet implemented")
 }
 
 enum class Direction { LEFT, RIGHT, UP, DOWN }
