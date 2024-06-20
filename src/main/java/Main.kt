@@ -22,7 +22,7 @@ fun performGame() {
             val scoreInfo = input.nextLine()
         }
 
-        val boards = mutableListOf<Board>()
+        val miniGames = mutableListOf<MiniGame>()
         for (i in 0 until nbGames) {
             val gpu = input.next()
             val reg0 = input.nextInt()
@@ -32,18 +32,18 @@ fun performGame() {
             val reg4 = input.nextInt()
             val reg5 = input.nextInt()
             val reg6 = input.nextInt()
-            val board = Board(i, listOf(Player(0, reg0, reg3), Player(1, reg1, reg4), Player(2, reg2, reg5)), gpu)
-            System.err.println(board)
-            boards.add(board)
+            val hurdleRace = HurdleRace(i, listOf(Player(0, reg0, reg3), Player(1, reg1, reg4), Player(2, reg2, reg5)), gpu)
+            System.err.println(hurdleRace)
+            miniGames.add(hurdleRace)
         }
         input.nextLine()
-        val delta = boards.map { board ->
-            val player = board.players[0]!!
-            val ourPos = board.players[0]!!.position
-            val index = board.nextHurdle(ourPos)
-            val delta = index - ourPos
-            System.err.println("$delta:$player")
-            return@map player to delta
+        val delta = miniGames.filterIsInstance<HurdleRace>(). map { board ->
+                val player = board.players[0]!!
+                val ourPos = board.players[0]!!.position
+                val index = board.nextHurdle(ourPos)
+                val delta = index - ourPos
+                System.err.println("$delta:$player")
+                return@map player to delta
         }.filter { it.second > 0 && it.first.stunned == 0 }
             .map { it.second }
             .min() ?: 0
@@ -68,7 +68,7 @@ interface MiniGame {
     fun next(): Direction
 }
 
-data class Board(val id: Int, val players: List<Player>, val field: String) : MiniGame {
+data class HurdleRace(val id: Int, val players: List<Player>, val field: String) : MiniGame {
     fun nextHurdle(pos: Int): Int = field.indexOf('#', pos + 1)
     override fun next() =
         TODO("Not yet implemented")
