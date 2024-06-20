@@ -65,7 +65,9 @@ fun performGame() {
                             RollerPlayer(0, reg0, reg3),
                             RollerPlayer(1, reg1, reg4),
                             RollerPlayer(2, reg2, reg5)
-                        ), gpu
+                        ),
+                        gpu,
+                        reg6
                     )
                     System.err.println(game)
                     miniGames.add(game)
@@ -129,7 +131,7 @@ data class Archery(val id: Int, val players: List<ArcheryPlayer>, val field: Str
         TODO("Not yet implemented")
 }
 
-data class Roller(val id: Int, val players: List<RollerPlayer>, val field: String) : MiniGame {
+data class Roller(val id: Int, val players: List<RollerPlayer>, val field: String, val leftSteps: Int) : MiniGame {
     override fun next() =
         TODO("Not yet implemented")
 }
