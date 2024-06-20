@@ -49,7 +49,7 @@ fun performGame() {
                 return@map player to delta
         }.filter { it.second > 0 && it.first.stunned == 0 }
             .map { it.second }
-            .min() ?: 0
+            .minOrNull() ?: 0
 
         if (delta == 1) {
             println("UP")
