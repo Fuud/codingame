@@ -32,9 +32,12 @@ fun performGame() {
             val reg4 = input.nextInt()
             val reg5 = input.nextInt()
             val reg6 = input.nextInt()
-            val hurdleRace = HurdleRace(i, listOf(Player(0, reg0, reg3), Player(1, reg1, reg4), Player(2, reg2, reg5)), gpu)
-            System.err.println(hurdleRace)
-            miniGames.add(hurdleRace)
+            if (i == 0) {
+                val hurdleRace =
+                    HurdleRace(i, listOf(Player(0, reg0, reg3), Player(1, reg1, reg4), Player(2, reg2, reg5)), gpu)
+                System.err.println(hurdleRace)
+                miniGames.add(hurdleRace)
+            }
         }
         input.nextLine()
         val delta = miniGames.filterIsInstance<HurdleRace>(). map { board ->
