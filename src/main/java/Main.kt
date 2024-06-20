@@ -92,8 +92,8 @@ fun performGame() {
         input.nextLine()
 //        println(miniGames.filterIsInstance<HurdleRace>().single().next())
 //        println(miniGames.filterIsInstance<Archery>().single().next())
-//        println(miniGames.filterIsInstance<Roller>().single().next())
-        println(miniGames.filterIsInstance<Diving>().single().next())
+        println(miniGames.filterIsInstance<Roller>().single().next())
+//        println(miniGames.filterIsInstance<Diving>().single().next())
 
     }
 }
@@ -132,8 +132,24 @@ data class Archery(val id: Int, val players: List<ArcheryPlayer>, val field: Str
 }
 
 data class Roller(val id: Int, val players: List<RollerPlayer>, val field: String, val leftSteps: Int) : MiniGame {
-    override fun next() =
-        TODO("Not yet implemented")
+    override fun next(): Direction {
+        val player = players[0]
+        val riskDirection = if (player.risk >= 4) {
+            0
+        } else if (player.risk == 3) {
+            1
+        } else if (player.risk == 2) {
+            2
+        } else /*if (player.risk == 1)*/ {
+            3
+        }
+        return when (field[riskDirection]) {
+            'U' -> Direction.UP
+            'D' -> Direction.DOWN
+            'L' -> Direction.LEFT
+            else -> Direction.RIGHT
+        }
+    }
 }
 
 data class Diving(val id: Int, val players: List<DiverPlayer>, val field: String) : MiniGame {
