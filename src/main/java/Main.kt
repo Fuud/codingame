@@ -1,3 +1,6 @@
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 import java.util.*
 
 /**
@@ -9,7 +12,7 @@ fun main() {
 }
 
 fun performGame() {
-    val input = Scanner(System.`in`)
+    val input = Scanner(TeeInputStream(System.`in`, System.err))
     val playerIdx = input.nextInt()
     val nbGames = input.nextInt()
     if (input.hasNextLine()) {
@@ -87,26 +90,11 @@ fun performGame() {
             }
         }
         input.nextLine()
-        val delta = miniGames.filterIsInstance<HurdleRace>(). map { board ->
-            val player = board.hurdleRacePlayers[0]!!
-            val ourPos = board.hurdleRacePlayers[0]!!.position
-                val index = board.nextHurdle(ourPos)
-                val delta = index - ourPos
-                System.err.println("$delta:$player")
-                return@map player to delta
-        }.filter { it.second > 0 && it.first.stunned == 0 }
-            .map { it.second }
-            .minOrNull() ?: 0
+//        println(miniGames.filterIsInstance<HurdleRace>().single().next())
+//        println(miniGames.filterIsInstance<Archery>().single().next())
+//        println(miniGames.filterIsInstance<Roller>().single().next())
+        println(miniGames.filterIsInstance<Diving>().single().next())
 
-        if (delta == 1) {
-            println("UP")
-        } else if (delta == 2) {
-            println("LEFT")
-        } else if (delta == 3) {
-            println("DOWN")
-        } else {
-            println("RIGHT")
-        }
     }
 }
 
@@ -121,14 +109,26 @@ interface MiniGame {
 
 data class HurdleRace(val id: Int, val hurdleRacePlayers: List<HurdleRacePlayer>, val field: String) : MiniGame {
     fun nextHurdle(pos: Int): Int = field.indexOf('#', pos + 1)
-    override fun next() =
-        TODO("Not yet implemented")
+    override fun next(): Direction {
+        val player = hurdleRacePlayers[0]
+        val ourPos = hurdleRacePlayers[0].position
+        val index = nextHurdle(ourPos)
+        val delta = index - ourPos
+        System.err.println("$delta:$player")
+        return when (delta) {
+            1 -> Direction.UP
+            2 -> Direction.LEFT
+            3 -> Direction.DOWN
+            else -> Direction.RIGHT
+        }
+    }
 
 }
 
 data class Archery(val id: Int, val players: List<ArcheryPlayer>, val field: String) : MiniGame {
-    override fun next() =
+    override fun next(): Direction {
         TODO("Not yet implemented")
+    }
 }
 
 data class Roller(val id: Int, val players: List<RollerPlayer>, val field: String, val leftSteps: Int) : MiniGame {
@@ -137,10 +137,76 @@ data class Roller(val id: Int, val players: List<RollerPlayer>, val field: Strin
 }
 
 data class Diving(val id: Int, val players: List<DiverPlayer>, val field: String) : MiniGame {
-    override fun next() =
-        TODO("Not yet implemented")
+    override fun next(): Direction{
+        return when (field.first()) {
+            'U' -> Direction.UP
+            'D' -> Direction.DOWN
+            'L' -> Direction.LEFT
+            else -> Direction.RIGHT
+        }
+    }
 }
 
 enum class Direction { LEFT, RIGHT, UP, DOWN }
 enum class Medal { GOLD, SILVER, BRONZE }
 data class MedalExpectations(val probabilities: Map<Medal, Double>)
+
+class TeeInputStream(private var source: InputStream, private var copySink: OutputStream) : InputStream() {
+    @Throws(IOException::class)
+    override fun read(): Int {
+        val result = source.read()
+        if (result >= 0) {
+            copySink.write(result)
+        }
+        return result
+    }
+
+    @Throws(IOException::class)
+    override fun available(): Int {
+        return source.available()
+    }
+
+    @Throws(IOException::class)
+    override fun close() {
+        source.close()
+    }
+
+    @Synchronized
+    override fun mark(readlimit: Int) {
+        source.mark(readlimit)
+    }
+
+    override fun markSupported(): Boolean {
+        return source.markSupported()
+    }
+
+    @Throws(IOException::class)
+    override fun read(b: ByteArray, off: Int, len: Int): Int {
+        val result = source.read(b, off, len)
+        if (result >= 0) {
+            copySink.write(b, off, result)
+        }
+        return result
+    }
+
+    @Throws(IOException::class)
+    override fun read(b: ByteArray): Int {
+        val result = source.read(b)
+        if (result >= 0) {
+            copySink.write(b, 0, result)
+        }
+        return result
+    }
+
+    @Synchronized
+    @Throws(IOException::class)
+    override fun reset() {
+        source.reset()
+    }
+
+    @Throws(IOException::class)
+    override fun skip(n: Long): Long {
+        return source.skip(n)
+    }
+}
+
