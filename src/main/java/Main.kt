@@ -2,6 +2,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.*
+import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
  * Auto-generated code below aims at helping you parse
@@ -128,6 +130,24 @@ data class HurdleRace(val id: Int, val hurdleRacePlayers: List<HurdleRacePlayer>
 data class Archery(val id: Int, val players: List<ArcheryPlayer>, val field: String) : MiniGame {
     override fun next(): Direction {
         TODO("Not yet implemented")
+
+
+    fun next(player:ArcheryPlayer) :Direction {
+        val steps = field.length
+        val array: Array<Array<Array<Double>>> = Array(steps) { _ -> Array(41) { _ -> Array(41) { _ -> 0.0 } } }
+        for (s in 0..steps) {
+            for (x in -20..20) {
+                for (y in -20..20) {
+                    if (s == 0) {
+                        array[steps - s][x - 20][y - 20] = sqrt(x * x.toDouble() + y * y)
+                    } else {
+                        val strength: Int = field[s] - '0'
+                        array[steps -s][x - 20][y - 20] = min()
+                    }
+                }
+            }
+        }
+    }
     }
 }
 
