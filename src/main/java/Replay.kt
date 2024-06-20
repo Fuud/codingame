@@ -1,25 +1,28 @@
 import Replay.downloadReplay
 import Replay.listLastBattles
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.core.StreamReadFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.kotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.engine.apache.*
-import io.ktor.client.features.cookies.*
-import io.ktor.client.features.json.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.cookies.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import io.ktor.serialization.jackson.*
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
 val ymlMapper = ObjectMapper(YAMLFactory().apply {
     this.enable(YAMLGenerator.Feature.LITERAL_BLOCK_STYLE)
 }).apply {
-    this.registerModule(KotlinModule())
+    this.registerModule(kotlinModule())
     this.writerWithDefaultPrettyPrinter()
 }
 
@@ -32,21 +35,23 @@ object Replay {
                 storage = ConstantCookiesStorage(
                     Cookie(
                         "cgSession",
-                        "4008078f-fdb1-4f0d-81b1-809f2b65430f",
+                        "2f3dac01-368c-4bc9-a9e5-0e75c92dca3d",
                         domain = "www.codingame.com"
                     )
                 )
             }
 
-            install(JsonFeature) {
-                serializer = JacksonSerializer()
+            install(ContentNegotiation) {
+                jackson(){
+                    enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION.mappedFeature())
+                }
             }
         }
     }
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val replayId = "627603779"
+        val replayId = "789674673"
 
         val replayFile = File("replays/$replayId.txt")
 
@@ -59,10 +64,10 @@ object Replay {
 
         try {
             System.setIn(input.byteInputStream())
-            logStream = System.out
-            performGame(echo = false)
+//            logStream = System.out
+            performGame()
         } catch (t: Throwable) {
-            System.err.println(t)
+            t.printStackTrace()
         }
 
     }
@@ -71,10 +76,10 @@ object Replay {
         return runBlocking {
             //get replay
             val gameInfo =
-                httpClient.post<ReplayInfo>("https://www.codingame.com/services/gameResult/findInformationById") {
-                    body = listOf<Any>(replayId, userId)
+                httpClient.post("https://www.codingame.com/services/gameResult/findInformationById") {
+                    setBody(listOf<Any>(replayId, userId))
                     contentType(ContentType.Application.Json)
-                }.gameResult
+                }.body<ReplayInfo>().gameResult
 
             val names = gameInfo.agents.map { it.index to (it.codingamer?.pseudo ?: "Boss") }.toMap()
 
@@ -99,11 +104,11 @@ object Replay {
     fun listLastBattles(sessionHandle: String): List<String> {
         return runBlocking {
             //get replay
-            val gameInfo =
-                httpClient.post<List<GameInfo>>("https://www.codingame.com/services/gamesPlayersRanking/findLastBattlesByTestSessionHandle") {
-                    body = listOf(sessionHandle, null)
+            val gameInfo: List<GameInfo> =
+                httpClient.post("https://www.codingame.com/services/gamesPlayersRanking/findLastBattlesByTestSessionHandle") {
+                    setBody(listOf(sessionHandle, null))
                     contentType(ContentType.Application.Json)
-                }
+                }.body()
 
             gameInfo.map { it.gameId }
         }
@@ -127,9 +132,7 @@ data class Frame(
 //    val view: String? = null,
     val keyframe: String? = null,
     val agentId: String? = null
-) {
-
-}
+)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class ReplayInfo(
