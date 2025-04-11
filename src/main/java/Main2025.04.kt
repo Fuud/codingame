@@ -1,5 +1,4 @@
 import java.util.Scanner
-import java.util.function.Consumer
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
@@ -11,15 +10,8 @@ import kotlin.math.min
 fun main(args: Array<String>) {
 
     val input = Scanner(System.`in`)
-    val depth = input.nextInt()
-//    for (i in 0 until 3) {
-//        for (j in 0 until 3) {
-//            val value = input.nextInt()
-//        }
-//    }
-
-//    var current = HashMap<Int, Int>()
     var current = Int2Int()
+    val depth = input.nextInt()
     val start =
         input.nextInt().shl(SHIFT_00)
             .or(input.nextInt().shl(SHIFT_01))
@@ -30,14 +22,14 @@ fun main(args: Array<String>) {
             .or(input.nextInt().shl(SHIFT_20))
             .or(input.nextInt().shl(SHIFT_21))
             .or(input.nextInt().shl(SHIFT_22))
+    // val depth = 20
+    // val start = 10748161
 
     System.err.println(depth)
     System.err.println(start)
-    val countUnique = false
-    val unique = mutableSetOf<Int>()
-    var overGames = 0
+
 //    current[start] = 1
-    current.addTo(start, 1)
+//    current.addTo(start, 1)
     var result = 0
     var r00 = 0
     var r01 = 0
@@ -49,11 +41,13 @@ fun main(args: Array<String>) {
     var r21 = 0
     var r22 = 0
     var total = 0L
-    for (turn in 1..depth) {
+    //made first turn to prevent zero key in map
+    move(current, 1, start)
+    for (turn in 2..depth) {
 //        val next = HashMap<Int, Int>()
 //        for ((board, times) in current) {
         val next = Int2Int()
-        current.int2IntEntrySet().fastForEach {
+        current.fastForEach {
             val board = it.key
             val times = it.value
             if (isOver(board)) {
@@ -67,11 +61,6 @@ fun main(args: Array<String>) {
                 r21 += times * get21(board)
                 r22 += times * get22(board)
                 total += times
-                if (countUnique) {
-                    unique.add(board)
-                    overGames++
-                }
-//                System.err.println("+++${board.toDecimal()} : $times")
             } else {
                 move(next, times, board)
             }
@@ -82,7 +71,7 @@ fun main(args: Array<String>) {
 //        }
         current = next
     }
-    current.int2IntEntrySet().fastForEach {
+    current.fastForEach {
         val board = it.key
         val times = it.value
         r00 += times * get00(board)
@@ -96,7 +85,6 @@ fun main(args: Array<String>) {
         r22 += times * get22(board)
         total += times
     }
-    System.err.println("unique=${unique.size} from $overGames")
     System.err.println(total)
 
 
@@ -410,12 +398,6 @@ inline private fun capture2(
     return false
 }
 
-private fun add(previous: Int?, times: Int): Int {
-    return previous?.let {
-        it + times
-    } ?: times
-}
-
 class Int2Int @JvmOverloads constructor(expected: Int = DEFAULT_INITIAL_SIZE, f: Float = DEFAULT_LOAD_FACTOR) {
 
     var key: IntArray
@@ -426,8 +408,6 @@ class Int2Int @JvmOverloads constructor(expected: Int = DEFAULT_INITIAL_SIZE, f:
 
     var mask: Int
 
-
-    var containsNullKey: Boolean = false
     var n: Int
     var maxFill: Int
 
@@ -435,31 +415,24 @@ class Int2Int @JvmOverloads constructor(expected: Int = DEFAULT_INITIAL_SIZE, f:
     var defRetValue: Int = 0
     val f: Float
     val minN: Int
-    var entries: MapEntrySet? = null
 
     fun addTo(k: Int, incr: Int): Int {
         var pos: Int
-        if (((k) == (0))) {
-            if (containsNullKey) {
-                return addToValue(n, incr)
+
+        var curr: Int
+        val key = this.key
+        // The starting point.
+        if ((key[((mix((k))) and mask).also { pos = it }].also { curr = it }) != (0)) {
+            if (((curr) == (k))) {
+                return addToValue(pos, incr)
             }
-            pos = n
-            containsNullKey = true
-        } else {
-            var curr: Int
-            val key = this.key
-            // The starting point.
-            if ((key[((mix((k))) and mask).also { pos = it }].also { curr = it }) != (0)) {
+            while ((key[((pos + 1) and mask).also { pos = it }].also { curr = it }) != (0)) {
                 if (((curr) == (k))) {
                     return addToValue(pos, incr)
                 }
-                while ((key[((pos + 1) and mask).also { pos = it }].also { curr = it }) != (0)) {
-                    if (((curr) == (k))) {
-                        return addToValue(pos, incr)
-                    }
-                }
             }
         }
+
         key[pos] = k
         value[pos] = defRetValue + incr
         if (size++ >= maxFill) {
@@ -474,12 +447,7 @@ class Int2Int @JvmOverloads constructor(expected: Int = DEFAULT_INITIAL_SIZE, f:
         return oldValue
     }
 
-
-    private fun realSize(): Int {
-        return if (containsNullKey) size - 1 else size
-    }
-
-    protected fun rehash(newN: Int) {
+    private fun rehash(newN: Int) {
         val key = this.key
         val value = this.value
         val mask = newN - 1 // Note that this is used by the hashing macro
@@ -487,7 +455,7 @@ class Int2Int @JvmOverloads constructor(expected: Int = DEFAULT_INITIAL_SIZE, f:
         val newValue = IntArray(newN + 1)
         var i = n
         var pos: Int
-        var j = realSize()
+        var j = size
         while (j-- != 0) {
             while (((key[--i]) == (0)));
             if ((newKey[((mix((key[i]))) and mask).also { pos = it }]) != (0)) {
@@ -504,26 +472,14 @@ class Int2Int @JvmOverloads constructor(expected: Int = DEFAULT_INITIAL_SIZE, f:
         this.value = newValue
     }
 
-    fun int2IntEntrySet(): MapEntrySet {
-        if (entries == null) entries = MapEntrySet()
-        return entries!!
-    }
-
-    inner class MapEntrySet {
-        fun fastForEach(consumer: Consumer<BasicEntry>) {
-            val entry = BasicEntry()
-            if (containsNullKey) {
-                entry.key = key[n]
-                entry.value = value[n]
-                consumer.accept(entry)
-            }
-            var pos = n
-            while (pos-- != 0) {
-                if ((key[pos]) != (0)) {
-                    entry.key = key[pos]
-                    entry.value = value[pos]
-                    consumer.accept(entry)
-                }
+    fun fastForEach(consumer: (BasicEntry) -> Unit) {
+        val entry = BasicEntry()
+        var pos = n
+        while (pos-- != 0) {
+            if ((key[pos]) != (0)) {
+                entry.key = key[pos]
+                entry.value = value[pos]
+                consumer.invoke(entry)
             }
         }
     }
